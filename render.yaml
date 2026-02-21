@@ -2,11 +2,7 @@ services:
   - type: web
     name: hospital-monitor
     runtime: python
-    buildCommand: |
-      pip install -r requirements.txt
-      python manage.py collectstatic --noinput --ignore="*.map" || true
-      python manage.py migrate --run-syncdb
-      python manage.py shell -c "from django.contrib.auth.models import User; User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin','admin@h.ir','admin123')"
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput --ignore="*.map" || true && python manage.py migrate && python manage.py shell -c "from django.contrib.auth.models import User; User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin','a@a.com','admin123')"
     startCommand: daphne -b 0.0.0.0 -p $PORT config.asgi:application
     envVars:
       - key: DJANGO_SETTINGS_MODULE
@@ -16,3 +12,14 @@ services:
       - key: DEBUG
         value: "False"
     autoDeploy: true
+```
+
+**Commit** کن → بعد از deploy برو **Events** در Render و ببین آیا migrate موفق بوده.
+
+---
+
+بعد از deploy موفق:
+```
+https://hospital-monitor-9f8z.onrender.com
+کاربر: admin
+رمز: admin123

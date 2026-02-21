@@ -2,7 +2,11 @@ services:
   - type: web
     name: hospital-monitor
     runtime: python
-    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput --ignore="*.map" || true && python manage.py migrate
+    buildCommand: >-
+      pip install -r requirements.txt &&
+      python manage.py collectstatic --noinput --ignore="*.map" || true &&
+      python manage.py migrate &&
+      python manage.py shell -c "from django.contrib.auth.models import User; User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin','admin@hospital.ir','admin123')"
     startCommand: daphne -b 0.0.0.0 -p $PORT config.asgi:application
     envVars:
       - key: DJANGO_SETTINGS_MODULE
@@ -11,8 +15,6 @@ services:
         generateValue: true
       - key: DEBUG
         value: "False"
-      - key: ALLOWED_HOSTS
-        value: .onrender.com
     healthCheckPath: /accounts/login/
     autoDeploy: true
 
@@ -21,3 +23,9 @@ databases:
     databaseName: hospital_monitor
     user: hospital_user
     plan: free
+```
+
+**Commit changes** بزن → **۳-۵ دقیقه** صبر کن → لاگین کن با:
+```
+کاربر: admin
+رمز: admin123

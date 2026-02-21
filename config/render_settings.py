@@ -6,11 +6,15 @@ DEBUG = False
 SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-secret')
 ALLOWED_HOSTS = ['*']
 
+# حذف jazzmin در Render
+INSTALLED_APPS = [app for app in INSTALLED_APPS if app != 'jazzmin']
+
 CSRF_TRUSTED_ORIGINS = [
     'https://hospital-monitor-9f8z.onrender.com',
 ]
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 DATABASE_URL = os.environ.get('DATABASE_URL')

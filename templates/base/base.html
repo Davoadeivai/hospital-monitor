@@ -29,6 +29,9 @@
 
 <div class="app-shell">
 
+  <!-- Sidebar Overlay (Mobile) -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
   <!-- ============ SIDEBAR ============ -->
   <nav class="sidebar" id="sidebar">
 
@@ -193,12 +196,22 @@ updateClock();
 // ===== Sidebar Toggle (Mobile) =====
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
 }
 
-// Check mobile
-if (window.innerWidth <= 768) {
-  document.getElementById('sidebar-toggle').style.display = 'flex';
+// Check mobile and resize
+function checkMobile() {
+  const btn = document.getElementById('sidebar-toggle');
+  if (window.innerWidth <= 768) {
+    btn.style.display = 'flex';
+  } else {
+    btn.style.display = 'none';
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('show');
+  }
 }
+window.addEventListener('resize', checkMobile);
+checkMobile();
 
 // ===== Toast System =====
 function showToast(msg, type = 'success', duration = 4000) {

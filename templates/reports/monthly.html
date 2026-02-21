@@ -1,0 +1,55 @@
+{% extends 'base/base.html' %}
+{% block title %}گزارش ماهانه{% endblock %}
+{% block breadcrumb %}REPORTS / MONTHLY{% endblock %}
+{% block content %}
+
+<div class="page-header fade-up">
+  <div class="page-title-group">
+    <div class="page-eyebrow">REPORTS / MONTHLY</div>
+    <h1 class="page-title">گزارش ماهانه</h1>
+    <p class="page-subtitle">خلاصه عملکرد تجهیزات در ماه جاری</p>
+  </div>
+  <a href="/reports/export/" class="btn btn-primary"><i class="fas fa-file-excel me-2"></i>خروجی Excel</a>
+</div>
+
+{% for report in reports %}
+<div class="panel mt-4 fade-up">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">{{ report.device.name }}</div>
+      <div class="panel-subtitle">{{ report.year }}/{{ report.month|stringformat:"02d" }}</div>
+    </div>
+    <span class="badge badge-ghost">{{ report.device.get_device_type_display }}</span>
+  </div>
+  <div class="panel-body">
+    <div class="stat-grid" style="grid-template-columns:repeat(5,1fr)">
+      <div style="text-align:center">
+        <div style="font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--acid)">{{ report.total_cycles }}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">سیکل</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--amber)">{{ report.total_kwh|floatformat:0 }}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">kWh</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--plasma)">{{ report.total_water_liter|floatformat:0 }}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">لیتر آب</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--acid)">{{ report.total_carbon_kg|floatformat:1 }}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">kg CO₂</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--crimson)">{{ report.total_cost|floatformat:0 }}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">ریال</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="panel mt-4" style="text-align:center;padding:60px">
+  <div style="font-size:48px;margin-bottom:16px">📊</div>
+  <div style="color:var(--text-tertiary);font-family:var(--font-mono)">گزارشی یافت نشد</div>
+</div>
+{% endfor %}
+{% endblock %}

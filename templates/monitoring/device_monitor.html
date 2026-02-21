@@ -1,0 +1,654 @@
+{% extends 'base/base.html' %}
+{% block title %}Monitor — {{ device.name }}{% endblock %}
+{% block breadcrumb %}DEVICES / {{ device.serial_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.monitor-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--space-5);
+}
+
+/* Realtime Chart Override */
+#rtChart { max-height: 250px; }
+
+/* Phase indicator */
+.phase-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: 1px solid;
+  transition: all 0.5s;
+}
+
+.phase-indicator.idle        { background: var(--surface-3); color: var(--text-tertiary); border-color: var(--border-subtle); }
+.phase-indicator.heating     { background: rgba(255,77,0,0.1); color: var(--fire); border-color: rgba(255,77,0,0.3); }
+.phase-indicator.sterilizing { background: rgba(0,255,136,0.1); color: var(--acid); border-color: rgba(0,255,136,0.3); }
+.phase-indicator.cooling     { background: rgba(0,212,255,0.1); color: var(--plasma); border-color: rgba(0,212,255,0.3); }
+.phase-indicator.complete    { background: rgba(0,255,136,0.08); color: var(--acid); border-color: rgba(0,255,136,0.2); opacity:0.7; }
+
+/* Log feed */
+.log-feed {
+  background: var(--void);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  height: 200px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.8;
+  border: 1px solid var(--border-subtle);
+}
+
+.log-line { color: var(--text-tertiary); }
+.log-line .log-time { color: var(--acid); margin-left: var(--space-2); }
+.log-line .log-val  { color: var(--text-secondary); }
+.log-line.log-warn  .log-val { color: var(--amber); }
+.log-line.log-crit  .log-val { color: var(--crimson); }
+
+/* Connection indicator */
+.ws-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.ws-indicator.connected .ws-dot { background: var(--acid); animation: led-pulse 2s infinite; }
+.ws-indicator.disconnected .ws-dot { background: var(--crimson); }
+.ws-indicator.connecting .ws-dot { background: var(--amber); animation: led-pulse 0.5s infinite; }
+
+.ws-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ===== PAGE HEADER ===== -->
+<div class="page-header fade-up">
+  <div class="page-title-group">
+    <div class="page-eyebrow">
+      LIVE MONITOR /
+      {% if device.device_type == 'autoclave' %}AUTOCLAVE{% else %}INCINERATOR{% endif %}
+    </div>
+    <h1 class="page-title">{{ device.name }}</h1>
+    <p class="page-subtitle">{{ device.department }} • {{ device.serial_number }} • {{ device.manufacturer }}</p>
+  </div>
+
+  <div class="flex items-center gap-3">
+    <!-- WebSocket Status -->
+    <div class="ws-indicator connecting" id="ws-indicator">
+      <div class="ws-dot"></div>
+      <span id="ws-label">CONNECTING</span>
+    </div>
+
+    <!-- Phase -->
+    <div class="phase-indicator" id="phase-indicator">
+      <div class="status-dot"></div>
+      <span id="phase-text">{{ device.get_status_display }}</span>
+    </div>
+
+    {% if not active_cycle %}
+    <button class="btn btn-primary" onclick="openCycleModal()">
+      <i class="fas fa-play me-2"></i>شروع سیکل
+    </button>
+    {% else %}
+    <button class="btn btn-danger" onclick="doCompleteCycle({{ active_cycle.pk }})">
+      <i class="fas fa-stop me-2"></i>پایان سیکل
+    </button>
+    {% endif %}
+
+    <a href="/" class="btn btn-ghost btn-icon"><i class="fas fa-arrow-right"></i></a>
+  </div>
+</div>
+
+<!-- ===== ACTIVE CYCLE BANNER ===== -->
+{% if active_cycle %}
+<div style="background:linear-gradient(135deg,rgba(0,255,136,0.08),rgba(0,212,255,0.05));border:1px solid rgba(0,255,136,0.2);border-radius:var(--radius-lg);padding:var(--space-5);margin-bottom:var(--space-5);display:flex;align-items:center;justify-content:space-between" class="fade-up stagger-1">
+  <div class="flex items-center gap-4">
+    <div style="width:48px;height:48px;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.2);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:22px">
+      <i class="fas fa-spinner fa-spin" style="color:var(--acid)"></i>
+    </div>
+    <div>
+      <div style="font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--acid)">
+        سیکل #{{ active_cycle.cycle_number }} — در حال اجرا
+      </div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary);margin-top:3px">
+        {{ active_cycle.waste_weight_kg }} kg • {{ active_cycle.get_waste_type_display }} • اپراتور: {{ active_cycle.operator|default:'—' }}
+      </div>
+    </div>
+  </div>
+  <div style="text-align:center">
+    <div id="cycle-timer" style="font-family:var(--font-display);font-size:28px;font-weight:800;letter-spacing:-2px;color:var(--text-primary)">00:00:00</div>
+    <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-tertiary);letter-spacing:1px">ELAPSED</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ===== MONITOR LAYOUT ===== -->
+<div class="monitor-layout fade-up stagger-2">
+
+  <!-- LEFT: Gauges + Chart + Log -->
+  <div class="flex flex-col gap-5">
+
+    <!-- Live Gauges -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📡 پارامترهای لحظه‌ای</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)" id="last-updated">—</div>
+      </div>
+      <div class="panel-body">
+
+        {% if device.device_type == 'autoclave' %}
+        <div class="gauge-grid" style="grid-template-columns:repeat(4,1fr)">
+
+          <div class="gauge-card normal" id="g-temp">
+            <div class="gauge-label">TEMPERATURE</div>
+            <div class="gauge-value" id="v-temp">{{ last_reading.temperature_c|floatformat:1|default:'—' }}</div>
+            <div class="gauge-unit">°C</div>
+            <div class="gauge-range"><span>Min: 121</span><span>Max: 134</span></div>
+          </div>
+
+          <div class="gauge-card normal" id="g-press">
+            <div class="gauge-label">PRESSURE</div>
+            <div class="gauge-value" id="v-press">{{ last_reading.pressure_bar|floatformat:2|default:'—' }}</div>
+            <div class="gauge-unit">bar</div>
+            <div class="gauge-range"><span>1.0</span><span>2.2</span></div>
+          </div>
+
+          <div class="gauge-card normal" id="g-power">
+            <div class="gauge-label">POWER</div>
+            <div class="gauge-value" id="v-power">{{ last_reading.power_consumption_kw|floatformat:1|default:'—' }}</div>
+            <div class="gauge-unit">kW</div>
+            <div class="gauge-range"><span>0</span><span>{{ device.power_kw }}</span></div>
+          </div>
+
+          <div class="gauge-card normal" id="g-water">
+            <div class="gauge-label">WATER LVL</div>
+            <div class="gauge-value" id="v-water">{{ last_reading.water_level_pct|floatformat:0|default:'—' }}</div>
+            <div class="gauge-unit">%</div>
+            <div class="mt-3">
+              <div class="progress-bar-wrap"><div class="progress-bar-fill" id="water-bar" style="width:{{ last_reading.water_level_pct|default:0 }}%;--bar-color:var(--plasma)"></div></div>
+            </div>
+          </div>
+
+        </div>
+
+        {% else %}
+        <!-- Incinerator -->
+        <div class="gauge-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:var(--space-4)">
+
+          <div class="gauge-card normal" id="g-comb">
+            <div class="gauge-label">COMBUSTION</div>
+            <div class="gauge-value" id="v-comb">{{ last_reading.combustion_temp_c|floatformat:0|default:'—' }}</div>
+            <div class="gauge-unit">°C</div>
+            <div class="gauge-range"><span>Min: 850</span><span>Max: 1200</span></div>
+          </div>
+
+          <div class="gauge-card normal" id="g-exhaust">
+            <div class="gauge-label">EXHAUST</div>
+            <div class="gauge-value" id="v-exhaust" style="font-size:32px">{{ last_reading.exhaust_temp_c|floatformat:0|default:'—' }}</div>
+            <div class="gauge-unit">°C</div>
+          </div>
+
+          <div class="gauge-card normal" id="g-power">
+            <div class="gauge-label">POWER</div>
+            <div class="gauge-value" id="v-power">{{ last_reading.power_consumption_kw|floatformat:1|default:'—' }}</div>
+            <div class="gauge-unit">kW</div>
+          </div>
+
+        </div>
+
+        <!-- Emissions -->
+        <div style="background:var(--surface-2);border-radius:var(--radius-md);padding:var(--space-4)">
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:var(--space-3)">EMISSIONS (ppm)</div>
+          <div class="emission-row">
+            <div class="emission-name">CO</div>
+            <div class="emission-bar-wrap"><div class="emission-bar-fill" id="bar-co" style="width:{{ last_reading.co_ppm|default:0|floatformat:0 }}%;--e-color:var(--crimson);max-width:100%"></div></div>
+            <div class="emission-val" id="v-co">{{ last_reading.co_ppm|floatformat:0|default:'—' }} ppm</div>
+          </div>
+          <div class="emission-row">
+            <div class="emission-name">NOx</div>
+            <div class="emission-bar-wrap"><div class="emission-bar-fill" id="bar-nox" style="width:{% widthratio last_reading.nox_ppm|default:0 400 100 %}%;--e-color:var(--amber)"></div></div>
+            <div class="emission-val" id="v-nox">{{ last_reading.nox_ppm|floatformat:0|default:'—' }} ppm</div>
+          </div>
+          <div class="emission-row">
+            <div class="emission-name">SO₂</div>
+            <div class="emission-bar-wrap"><div class="emission-bar-fill" id="bar-so2" style="width:{% widthratio last_reading.so2_ppm|default:0 200 100 %}%;--e-color:var(--fire)"></div></div>
+            <div class="emission-val" id="v-so2">{{ last_reading.so2_ppm|floatformat:0|default:'—' }} ppm</div>
+          </div>
+          <div class="emission-row">
+            <div class="emission-name">CO₂</div>
+            <div class="emission-bar-wrap"><div class="emission-bar-fill" id="bar-co2" style="width:{% widthratio last_reading.co2_ppm|default:0 10000 100 %}%;--e-color:var(--plasma)"></div></div>
+            <div class="emission-val" id="v-co2">{{ last_reading.co2_ppm|floatformat:0|default:'—' }} ppm</div>
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <!-- Realtime Chart -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📈 نمودار real-time</div>
+        <div class="flex gap-2">
+          <button class="btn btn-ghost btn-sm" onclick="setChartWindow(15)">15m</button>
+          <button class="btn btn-ghost btn-sm active-tab" onclick="setChartWindow(60)">1h</button>
+          <button class="btn btn-ghost btn-sm" onclick="setChartWindow(360)">6h</button>
+        </div>
+      </div>
+      <div class="panel-body" style="padding-top:0">
+        <canvas id="rtChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Live Log -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📋 لاگ لحظه‌ای</div>
+        <button class="btn btn-ghost btn-sm" onclick="clearLog()">پاک کردن</button>
+      </div>
+      <div class="panel-body" style="padding-top:0">
+        <div class="log-feed" id="log-feed">
+          <div class="log-line"><span class="log-time">SYSTEM</span><span class="log-val">صفحه مانیتورینگ بارگزاری شد — در انتظار WebSocket...</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT SIDEBAR -->
+  <div class="flex flex-col gap-5">
+
+    <!-- Device Info -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📱 اطلاعات دستگاه</div>
+      </div>
+      <div class="panel-body" style="padding-top:0">
+        <table style="width:100%;font-size:12.5px">
+          <tr style="border-bottom:1px solid var(--border-subtle)">
+            <td style="padding:var(--space-3) 0;color:var(--text-tertiary);font-family:var(--font-mono);font-size:10px">مدل</td>
+            <td style="padding:var(--space-3) 0;color:var(--text-primary);text-align:left">{{ device.model_number|default:'—' }}</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-subtle)">
+            <td style="padding:var(--space-3) 0;color:var(--text-tertiary);font-family:var(--font-mono);font-size:10px">ظرفیت</td>
+            <td style="padding:var(--space-3) 0;color:var(--acid);text-align:left;font-family:var(--font-mono)">{{ device.capacity_kg }} kg</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-subtle)">
+            <td style="padding:var(--space-3) 0;color:var(--text-tertiary);font-family:var(--font-mono);font-size:10px">توان</td>
+            <td style="padding:var(--space-3) 0;color:var(--amber);text-align:left;font-family:var(--font-mono)">{{ device.power_kw }} kW</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-subtle)">
+            <td style="padding:var(--space-3) 0;color:var(--text-tertiary);font-family:var(--font-mono);font-size:10px">سرویس</td>
+            <td style="padding:var(--space-3) 0;color:{% if device.maintenance_due %}var(--crimson){% else %}var(--text-secondary){% endif %};text-align:left;font-size:11px">{{ device.next_maintenance|default:'ثبت نشده' }}</td>
+          </tr>
+          <tr>
+            <td style="padding:var(--space-3) 0;color:var(--text-tertiary);font-family:var(--font-mono);font-size:10px">MQTT</td>
+            <td style="padding:var(--space-3) 0;color:var(--plasma);text-align:left;font-family:var(--font-mono);font-size:10px">{{ device.mqtt_topic|default:'—' }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- 30-day Stats -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📊 آمار ۳۰ روز</div>
+        <span class="badge badge-ghost">30D</span>
+      </div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:var(--space-4)">
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">سیکل‌ها</span>
+            <span style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--acid)">{{ stats.total_cycles|default:0 }}</span>
+          </div>
+          <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:80%;--bar-color:var(--acid)"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">زباله (kg)</span>
+            <span style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--plasma)">{{ stats.total_waste_kg|floatformat:0|default:0 }}</span>
+          </div>
+          <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:65%;--bar-color:var(--plasma)"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">مصرف برق (kWh)</span>
+            <span style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--amber)">{{ stats.total_kwh|floatformat:0|default:0 }}</span>
+          </div>
+          <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:70%;--bar-color:var(--amber)"></div></div>
+        </div>
+        <div style="padding-top:var(--space-3);border-top:1px solid var(--border-subtle)">
+          <div style="text-align:center">
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);margin-bottom:4px">هزینه کل (ریال)</div>
+            <div style="font-family:var(--font-display);font-size:24px;font-weight:800;letter-spacing:-1px;color:var(--crimson)">{{ stats.total_cost|floatformat:0|default:0 }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Cycles -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">🔄 آخرین سیکل‌ها</div>
+      </div>
+      <div style="overflow-y:auto;max-height:250px">
+        <table class="data-table">
+          <thead><tr><th>#</th><th>kg</th><th>مدت</th><th>وضعیت</th></tr></thead>
+          <tbody>
+          {% for c in recent_cycles %}
+          <tr>
+            <td class="td-mono" style="color:var(--text-tertiary)">#{{ c.cycle_number }}</td>
+            <td class="td-mono">{{ c.waste_weight_kg }}</td>
+            <td class="td-mono">{{ c.duration_minutes|default:'—' }}m</td>
+            <td>
+              <span class="badge {% if c.status == 'complete' %}badge-green{% elif c.status == 'error' %}badge-red{% elif c.status == 'aborted' %}badge-amber{% else %}badge-ghost{% endif %}">
+                {{ c.get_status_display }}
+              </span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="text-align:center;color:var(--text-tertiary);padding:20px;font-size:12px">سیکلی ثبت نشده</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== START CYCLE MODAL ===== -->
+<div class="modal-overlay" id="cycle-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeCycleModal()"><i class="fas fa-times"></i></button>
+    <div class="modal-title">🚀 شروع سیکل جدید</div>
+
+    <div class="form-group">
+      <label class="form-label">وزن زباله (kg)</label>
+      <input type="number" class="form-control" id="f-weight" placeholder="مثلاً 5.5" step="0.1" min="0.1">
+    </div>
+    <div class="form-group">
+      <label class="form-label">نوع زباله</label>
+      <select class="form-control" id="f-type">
+        <option value="infectious">🦠 عفونی</option>
+        <option value="sharp">🔪 تیز و برنده</option>
+        <option value="pharmaceutical">💊 دارویی</option>
+        <option value="pathological">🧬 پاتولوژیک</option>
+        <option value="chemical">⚗️ شیمیایی</option>
+        <option value="general">📦 عمومی</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">یادداشت</label>
+      <textarea class="form-control" id="f-notes" rows="2" placeholder="توضیحات اختیاری..."></textarea>
+    </div>
+
+    <div style="display:flex;gap:var(--space-3);justify-content:flex-end;margin-top:var(--space-6)">
+      <button class="btn btn-ghost" onclick="closeCycleModal()">انصراف</button>
+      <button class="btn btn-primary" onclick="doStartCycle()">
+        <i class="fas fa-play me-2"></i>شروع سیکل
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const DEVICE_ID = {{ device.pk }};
+const DEVICE_TYPE = '{{ device.device_type }}';
+{% if active_cycle %}
+const CYCLE_START = new Date('{{ active_cycle.start_time.isoformat }}');
+{% else %}
+const CYCLE_START = null;
+{% endif %}
+
+// ========== REALTIME CHART ==========
+const rtCtx = document.getElementById('rtChart').getContext('2d');
+const MAX_PTS = 60;
+
+const initialData = {{ recent_readings|safe }};
+const labels   = initialData.map(r => new Date(r.timestamp).toLocaleTimeString('fa-IR', {hour:'2-digit',minute:'2-digit'}));
+const primary  = initialData.map(r => DEVICE_TYPE === 'autoclave' ? r.temperature_c : r.combustion_temp_c);
+const powerArr = initialData.map(r => r.power_consumption_kw);
+
+const rtChart = new Chart(rtCtx, {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [
+      {
+        label: DEVICE_TYPE === 'autoclave' ? 'دما (°C)' : 'احتراق (°C)',
+        data: primary,
+        borderColor: '#ff4d00', backgroundColor: 'rgba(255,77,0,0.05)',
+        borderWidth: 2, pointRadius: 0, fill: true, tension: 0.4, yAxisID: 'y',
+      },
+      {
+        label: 'برق (kW)',
+        data: powerArr,
+        borderColor: '#ffb800', backgroundColor: 'rgba(255,184,0,0.05)',
+        borderWidth: 2, pointRadius: 0, fill: true, tension: 0.4, yAxisID: 'y1',
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true, animation: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'top', labels: { color: '#7a8fa6', font: { family: "'Vazirmatn', sans-serif", size: 11 }, boxWidth: 12 } },
+      tooltip: { backgroundColor: '#0f1419', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, titleColor: '#e8edf2', bodyColor: '#7a8fa6', padding: 12 }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#445566', font: { size: 10, family: "'Space Mono', monospace" }, maxTicksLimit: 8 } },
+      y: { position: 'right', grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#ff4d00', font: { size: 10, family: "'Space Mono', monospace" } } },
+      y1: { position: 'left', grid: { drawOnChartArea: false }, ticks: { color: '#ffb800', font: { size: 10, family: "'Space Mono', monospace" } } }
+    }
+  }
+});
+
+function addChartPoint(t, p, pw) {
+  if (labels.length >= MAX_PTS) { labels.shift(); primary.shift(); powerArr.shift(); }
+  labels.push(t);
+  primary.push(p);
+  powerArr.push(pw);
+  rtChart.update('none');
+}
+
+// ========== LOG ==========
+function addLog(msg, level = 'info') {
+  const feed = document.getElementById('log-feed');
+  const line = document.createElement('div');
+  line.className = `log-line ${level === 'warn' ? 'log-warn' : level === 'crit' ? 'log-crit' : ''}`;
+  const now = new Date().toLocaleTimeString('fa-IR');
+  line.innerHTML = `<span class="log-time">${now}</span><span class="log-val">${msg}</span>`;
+  feed.appendChild(line);
+  if (feed.children.length > 100) feed.removeChild(feed.firstChild);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function clearLog() { document.getElementById('log-feed').innerHTML = ''; }
+
+// ========== WEBSOCKET ==========
+let ws;
+function connectWS() {
+  setWsStatus('connecting');
+  const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/device/${DEVICE_ID}/`;
+  ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    setWsStatus('connected');
+    addLog('WebSocket متصل شد — دریافت real-time data');
+  };
+
+  ws.onclose = () => {
+    setWsStatus('disconnected');
+    addLog('WebSocket قطع شد — تلاش مجدد در ۳ ثانیه', 'warn');
+    setTimeout(connectWS, 3000);
+  };
+
+  ws.onmessage = (ev) => {
+    try {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === 'sensor_update' || msg.type === 'initial') {
+        updateGauges(msg.data);
+      } else if (msg.type === 'alert') {
+        addLog(`⚠️ هشدار: ${msg.data.message}`, 'crit');
+        showToast(msg.data.message, 'error');
+      }
+    } catch(e) {}
+  };
+}
+
+function setWsStatus(s) {
+  const ind = document.getElementById('ws-indicator');
+  const lbl = document.getElementById('ws-label');
+  ind.className = `ws-indicator ${s}`;
+  lbl.textContent = s === 'connected' ? 'LIVE' : s === 'connecting' ? 'CONNECTING...' : 'DISCONNECTED';
+}
+
+// ========== GAUGE UPDATES ==========
+function setVal(id, val, decimals = 1) {
+  const el = document.getElementById(id);
+  if (!el || val === null || val === undefined) return;
+  const formatted = typeof val === 'number' ? val.toFixed(decimals) : val;
+  if (el.textContent !== formatted) {
+    el.textContent = formatted;
+    el.classList.add('updating');
+    setTimeout(() => el.classList.remove('updating'), 300);
+  }
+}
+
+function setGaugeLevel(id, val, min, max) {
+  const card = document.getElementById(id);
+  if (!card) return;
+  card.className = 'gauge-card';
+  if (val < min || val > max) card.classList.add('critical');
+  else if (val < min * 1.05 || val > max * 0.95) card.classList.add('warning');
+  else card.classList.add('normal');
+}
+
+function updateGauges(d) {
+  const t = new Date(d.timestamp).toLocaleTimeString('fa-IR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('last-updated').textContent = 'آپدیت: ' + t;
+
+  if (DEVICE_TYPE === 'autoclave') {
+    setVal('v-temp',  d.temperature, 1);
+    setVal('v-press', d.pressure, 2);
+    setVal('v-power', d.power, 1);
+    setVal('v-water', d.water_level, 0);
+    if (d.water_level != null) {
+      document.getElementById('water-bar').style.width = Math.min(d.water_level, 100) + '%';
+    }
+    setGaugeLevel('g-temp', d.temperature, 121, 134);
+    setGaugeLevel('g-press', d.pressure, 1.0, 2.2);
+    addChartPoint(t, d.temperature, d.power);
+    addLog(`T:${d.temperature}°C | P:${d.pressure}bar | PWR:${d.power}kW | STATUS:${d.status}`);
+
+  } else {
+    setVal('v-comb',   d.combustion_temp, 0);
+    setVal('v-exhaust', d.exhaust_temp, 0);
+    setVal('v-power',  d.power, 1);
+    setVal('v-co',  d.co_ppm, 0);  setVal('v-nox', d.nox_ppm, 0);
+    setVal('v-so2', d.so2_ppm, 0); setVal('v-co2', d.co2_ppm, 0);
+    if (d.co_ppm != null) { document.getElementById('bar-co').style.width  = Math.min(d.co_ppm, 100) + '%'; }
+    if (d.nox_ppm != null){ document.getElementById('bar-nox').style.width = Math.min(d.nox_ppm/400*100, 100) + '%'; }
+    setGaugeLevel('g-comb', d.combustion_temp, 850, 1200);
+    addChartPoint(t, d.combustion_temp, d.power);
+    addLog(`COMB:${d.combustion_temp}°C | CO:${d.co_ppm}ppm | NOx:${d.nox_ppm}ppm`);
+  }
+
+  // Phase
+  updatePhase(d.status);
+}
+
+function updatePhase(status) {
+  const phMap = {
+    idle: 'IDLE', heating: 'HEATING', sterilizing: 'STERILIZING',
+    burning: 'BURNING', cooling: 'COOLING', complete: 'COMPLETE'
+  };
+  const ind = document.getElementById('phase-indicator');
+  const txt = document.getElementById('phase-text');
+  ind.className = `phase-indicator ${status}`;
+  txt.textContent = phMap[status] || status.toUpperCase();
+}
+
+// ========== CYCLE TIMER ==========
+function updateTimer() {
+  if (!CYCLE_START) return;
+  const diff = Math.floor((Date.now() - CYCLE_START) / 1000);
+  const h = Math.floor(diff / 3600).toString().padStart(2, '0');
+  const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
+  const s = (diff % 60).toString().padStart(2, '0');
+  const el = document.getElementById('cycle-timer');
+  if (el) el.textContent = `${h}:${m}:${s}`;
+}
+if (CYCLE_START) setInterval(updateTimer, 1000);
+
+// ========== CYCLE CONTROLS ==========
+function openCycleModal() {
+  document.getElementById('cycle-modal').classList.add('open');
+}
+function closeCycleModal() {
+  document.getElementById('cycle-modal').classList.remove('open');
+}
+
+async function doStartCycle() {
+  const w = document.getElementById('f-weight').value;
+  const t = document.getElementById('f-type').value;
+  const n = document.getElementById('f-notes').value;
+  if (!w || parseFloat(w) <= 0) { showToast('وزن زباله را وارد کنید', 'error'); return; }
+
+  const fd = new FormData();
+  fd.append('waste_weight', w); fd.append('waste_type', t); fd.append('notes', n);
+  const res = await fetch(`/monitoring/start-cycle/${DEVICE_ID}/`, {
+    method: 'POST', headers: { 'X-CSRFToken': getCsrf() }, body: fd
+  });
+  const data = await res.json();
+  if (data.success) {
+    showToast(`سیکل #${data.cycle_number} شروع شد`, 'success');
+    setTimeout(() => location.reload(), 1000);
+  } else {
+    showToast(data.error || 'خطا در شروع سیکل', 'error');
+  }
+}
+
+async function doCompleteCycle(cid) {
+  if (!confirm('سیکل را پایان می‌دهید؟')) return;
+  const res = await fetch(`/monitoring/complete-cycle/${cid}/`, {
+    method: 'POST', headers: { 'X-CSRFToken': getCsrf() }
+  });
+  const data = await res.json();
+  if (data.success) {
+    showToast(`سیکل پایان یافت — مدت: ${data.duration_min} دقیقه`, 'success');
+    setTimeout(() => location.reload(), 1200);
+  }
+}
+
+function setChartWindow(minutes) {
+  // Load data for window - would call API in real implementation
+  showToast(`نمایش ${minutes} دقیقه اخیر`, 'success');
+}
+
+// ========== START ==========
+connectWS();
+addLog('صفحه مانیتورینگ آماده — برقراری اتصال WebSocket...');
+</script>
+{% endblock %}

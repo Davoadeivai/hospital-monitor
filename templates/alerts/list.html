@@ -1,0 +1,116 @@
+{% extends 'base/base.html' %}
+{% block title %}Alerts{% endblock %}
+{% block breadcrumb %}ALERTS / ACTIVE{% endblock %}
+
+{% block content %}
+
+<div class="page-header fade-up">
+  <div class="page-title-group">
+    <div class="page-eyebrow">OPERATIONS / ALERTS</div>
+    <h1 class="page-title">هشدارها</h1>
+    <p class="page-subtitle">{{ total_alerts }} هشدار فعال — {{ critical_count }} بحرانی</p>
+  </div>
+  <div class="flex gap-3">
+    <button class="btn btn-ghost" onclick="filterAlerts('all')" id="f-all">همه</button>
+    <button class="btn btn-ghost" onclick="filterAlerts('critical')" id="f-critical">بحرانی</button>
+    <button class="btn btn-ghost" onclick="filterAlerts('warning')" id="f-warning">هشدار</button>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stat-grid fade-up stagger-1" style="grid-template-columns:repeat(3,1fr)">
+  <div class="stat-card accent-red">
+    <div class="stat-header"><div class="stat-icon-wrap">🚨</div></div>
+    <div class="stat-value">{{ critical_count }}</div>
+    <div class="stat-label">هشدار بحرانی</div>
+  </div>
+  <div class="stat-card accent-amber">
+    <div class="stat-header"><div class="stat-icon-wrap">⚠️</div></div>
+    <div class="stat-value">{{ warning_count }}</div>
+    <div class="stat-label">هشدار معمولی</div>
+  </div>
+  <div class="stat-card accent-blue">
+    <div class="stat-header"><div class="stat-icon-wrap">✅</div></div>
+    <div class="stat-value">{{ resolved_today }}</div>
+    <div class="stat-label">رفع شده امروز</div>
+  </div>
+</div>
+
+<!-- Alert Feed -->
+<div class="panel mt-6 fade-up stagger-2">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">📋 لیست هشدارهای فعال</div>
+      <div class="panel-subtitle">ACTIVE ALERTS — REAL-TIME</div>
+    </div>
+    <form method="post" action="/alerts/resolve-all/">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-ghost btn-sm" onclick="return confirm('همه هشدارها رفع شود؟')">
+        رفع همه
+      </button>
+    </form>
+  </div>
+
+  <div class="panel-body" style="padding:0">
+    <div id="alerts-container" style="display:flex;flex-direction:column">
+      {% for alert in alerts %}
+      <div class="alert-feed-item {{ alert.severity }}" id="alert-{{ alert.pk }}"
+           style="display:flex;align-items:flex-start;gap:var(--space-4);padding:var(--space-5) var(--space-6);border-bottom:1px solid var(--border-subtle);border-right:3px solid {% if alert.severity == 'critical' %}var(--crimson){% elif alert.severity == 'warning' %}var(--amber){% else %}var(--plasma){% endif %};transition:all 0.4s;background:{% if alert.severity == 'critical' %}rgba(255,34,68,0.03){% elif alert.severity == 'warning' %}rgba(255,184,0,0.02){% else %}transparent{% endif %}">
+
+        <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:{% if alert.severity == 'critical' %}rgba(255,34,68,0.12){% elif alert.severity == 'warning' %}rgba(255,184,0,0.12){% else %}rgba(0,212,255,0.12){% endif %}">
+          {% if alert.severity == 'critical' %}🚨{% elif alert.severity == 'warning' %}⚠️{% else %}ℹ️{% endif %}
+        </div>
+
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:4px">
+            <span style="font-size:14px;font-weight:600;color:var(--text-primary)">{{ alert.device.name }}</span>
+            <span class="badge {% if alert.severity == 'critical' %}badge-red{% elif alert.severity == 'warning' %}badge-amber{% else %}badge-blue{% endif %}">{{ alert.get_severity_display }}</span>
+            <span class="badge badge-ghost">{{ alert.get_alert_type_display }}</span>
+          </div>
+          <div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px;line-height:1.5">{{ alert.message }}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">
+            {{ alert.created_at|date:"Y/m/d H:i" }} — {{ alert.created_at|timesince }} پیش
+            {% if alert.value %} — مقدار: <span style="color:var(--amber)">{{ alert.value }}</span>{% endif %}
+            {% if alert.threshold %} — حد: <span style="color:var(--text-secondary)">{{ alert.threshold }}</span>{% endif %}
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:var(--space-2)">
+          <a href="/monitor/{{ alert.device.pk }}/" class="btn btn-ghost btn-sm btn-icon" title="مانیتور دستگاه">
+            <i class="fas fa-eye"></i>
+          </a>
+          <button class="btn btn-ghost btn-sm" onclick="resolveAlert({{ alert.pk }}, this)" title="رفع هشدار" style="color:var(--acid);border-color:rgba(0,255,136,0.2)">
+            <i class="fas fa-check"></i>
+          </button>
+        </div>
+
+      </div>
+      {% empty %}
+      <div style="text-align:center;padding:80px 40px;color:var(--text-tertiary)">
+        <div style="font-size:48px;margin-bottom:16px">✅</div>
+        <div style="font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--acid);margin-bottom:8px">ALL CLEAR</div>
+        <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:1px">هیچ هشداری وجود ندارد</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterAlerts(type) {
+  document.querySelectorAll('[id^="f-"]').forEach(b => b.classList.remove('btn-primary'));
+  document.getElementById(`f-${type}`).classList.add('btn-primary');
+
+  document.querySelectorAll('.alert-feed-item').forEach(item => {
+    if (type === 'all' || item.classList.contains(type)) {
+      item.style.display = 'flex';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+}
+</script>
+{% endblock %}

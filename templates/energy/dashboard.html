@@ -1,0 +1,213 @@
+{% extends 'base/base.html' %}
+{% block title %}Energy Analytics{% endblock %}
+{% block breadcrumb %}ENERGY / ANALYTICS{% endblock %}
+
+{% block content %}
+
+<div class="page-header fade-up">
+  <div class="page-title-group">
+    <div class="page-eyebrow">ENERGY / ANALYTICS</div>
+    <h1 class="page-title">مصرف انرژی و هزینه</h1>
+    <p class="page-subtitle">تحلیل جامع مصرف برق، آب، سوخت و ردپای کربن</p>
+  </div>
+  <a href="/reports/export/" class="btn btn-primary"><i class="fas fa-download me-2"></i>خروجی Excel</a>
+</div>
+
+<!-- ===== TOP STATS ===== -->
+<div class="stat-grid fade-up stagger-1" style="grid-template-columns:repeat(4,1fr)">
+
+  <div class="stat-card accent-amber">
+    <div class="stat-header">
+      <div class="stat-icon-wrap">⚡</div>
+      <span class="badge badge-amber">این ماه</span>
+    </div>
+    <div class="stat-value">{{ month_stats.total_kwh|floatformat:0|default:0 }}</div>
+    <div class="stat-label">مصرف برق (kWh)</div>
+    <div class="stat-sub">{{ month_stats.count|default:0 }} سیکل</div>
+  </div>
+
+  <div class="stat-card accent-blue">
+    <div class="stat-header">
+      <div class="stat-icon-wrap">💧</div>
+      <span class="badge badge-blue">این ماه</span>
+    </div>
+    <div class="stat-value">{{ month_stats.total_water|floatformat:0|default:0 }}</div>
+    <div class="stat-label">مصرف آب (لیتر)</div>
+    <div class="stat-sub">اتوکلاوها</div>
+  </div>
+
+  <div class="stat-card accent-fire">
+    <div class="stat-header">
+      <div class="stat-icon-wrap">🛢️</div>
+      <span class="badge badge-amber">این ماه</span>
+    </div>
+    <div class="stat-value">{{ month_stats.total_fuel|floatformat:0|default:0 }}</div>
+    <div class="stat-label">مصرف سوخت (لیتر)</div>
+    <div class="stat-sub">زباله‌سوزها</div>
+  </div>
+
+  <div class="stat-card accent-green">
+    <div class="stat-header">
+      <div class="stat-icon-wrap">🌿</div>
+      <span class="badge badge-ghost">CO₂</span>
+    </div>
+    <div class="stat-value">{{ month_stats.total_carbon|floatformat:0|default:0 }}</div>
+    <div class="stat-label">ردپای کربن (kg)</div>
+    <div class="stat-sub">ضریب: 0.592 kg/kWh</div>
+  </div>
+
+</div>
+
+<!-- ===== CHARTS ===== -->
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:var(--space-5);margin-top:var(--space-5)" class="fade-up stagger-2">
+
+  <!-- Trend 12 months -->
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">📈 روند ۱۲ ماهه</div>
+        <div class="panel-subtitle">MONTHLY ENERGY TREND</div>
+      </div>
+    </div>
+    <div class="panel-body" style="padding-top:0">
+      <canvas id="trendChart" height="90" style="max-height:260px"></canvas>
+    </div>
+  </div>
+
+  <!-- Device breakdown -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">🔌 تفکیک دستگاه‌ها</div>
+    </div>
+    <div class="panel-body" style="padding-top:0">
+      <canvas id="pieChart" height="160"></canvas>
+      <div style="margin-top:var(--space-4);display:flex;flex-direction:column;gap:var(--space-2)">
+        {% for d in device_stats %}
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px">
+          <span style="color:var(--text-secondary)">{{ d.device.name }}</span>
+          <span style="font-family:var(--font-mono);color:var(--acid)">{{ d.kwh|floatformat:0|default:0 }} kWh</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== COST TABLE ===== -->
+<div class="panel mt-6 fade-up stagger-3">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">💰 هزینه به تفکیک دستگاه — این ماه</div>
+      <div class="panel-subtitle">DEVICE COST BREAKDOWN</div>
+    </div>
+    <a href="/energy/tariffs/" class="btn btn-ghost btn-sm">تعرفه‌ها</a>
+  </div>
+  <div class="panel-body" style="padding:0">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>دستگاه</th>
+          <th>نوع</th>
+          <th>تعداد سیکل</th>
+          <th>برق (kWh)</th>
+          <th>هزینه برق (ریال)</th>
+          <th>آب (L)</th>
+          <th>کربن (kg)</th>
+          <th>هزینه کل</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in device_stats %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:18px">{% if d.device.device_type == 'autoclave' %}🔬{% else %}🔥{% endif %}</span>
+              <span class="td-primary">{{ d.device.name }}</span>
+            </div>
+          </td>
+          <td><span class="badge badge-ghost">{{ d.device.get_device_type_display }}</span></td>
+          <td class="td-mono td-accent">{{ d.cycles|default:0 }}</td>
+          <td class="td-mono" style="color:var(--amber)">{{ d.kwh|floatformat:1|default:0 }}</td>
+          <td class="td-mono" style="color:var(--text-primary)">{{ d.electricity_cost|floatformat:0|default:0 }}</td>
+          <td class="td-mono" style="color:var(--plasma)">{{ d.water|floatformat:0|default:0 }}</td>
+          <td class="td-mono" style="color:var(--acid)">{{ d.carbon|floatformat:1|default:0 }}</td>
+          <td class="td-mono" style="color:var(--crimson);font-weight:700">{{ d.cost|floatformat:0|default:0 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-tertiary)">داده‌ای یافت نشد</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const trendData = {{ monthly_trend|safe }};
+const deviceStats = {{ device_stats_json|safe }};
+
+// Trend chart
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: trendData.map(d => d.month),
+    datasets: [
+      {
+        label: 'برق (kWh)',
+        data: trendData.map(d => d.kwh),
+        borderColor: '#ffb800', backgroundColor: 'rgba(255,184,0,0.06)',
+        fill: true, tension: 0.4, borderWidth: 2, pointRadius: 3,
+        pointBackgroundColor: '#ffb800', yAxisID: 'y',
+      },
+      {
+        label: 'هزینه (هزار ریال)',
+        data: trendData.map(d => d.cost / 1000),
+        borderColor: '#00ff88', backgroundColor: 'rgba(0,255,136,0.06)',
+        fill: true, tension: 0.4, borderWidth: 2, pointRadius: 3,
+        pointBackgroundColor: '#00ff88', yAxisID: 'y1',
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'top', labels: { color: '#7a8fa6', font: { family: "'Vazirmatn',sans-serif", size: 11 }, boxWidth: 12 } },
+      tooltip: { backgroundColor: '#0f1419', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, titleColor: '#e8edf2', bodyColor: '#7a8fa6', padding: 12 }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#445566', font: { size: 10, family: "'Space Mono',monospace" } } },
+      y:  { position: 'right', grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#ffb800', font: { size: 10, family: "'Space Mono',monospace" } } },
+      y1: { position: 'left', grid: { drawOnChartArea: false }, ticks: { color: '#00ff88', font: { size: 10, family: "'Space Mono',monospace" } } },
+    }
+  }
+});
+
+// Pie chart
+const COLORS = ['#00ff88','#00d4ff','#ffb800','#ff4d00','#ff2244','#7c3aed'];
+new Chart(document.getElementById('pieChart'), {
+  type: 'doughnut',
+  data: {
+    labels: deviceStats.map(d => d.name),
+    datasets: [{
+      data: deviceStats.map(d => d.kwh || 0),
+      backgroundColor: COLORS.slice(0, deviceStats.length),
+      borderColor: '#0a0d12',
+      borderWidth: 3,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { backgroundColor: '#0f1419', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, titleColor: '#e8edf2', bodyColor: '#7a8fa6', padding: 12 }
+    },
+    cutout: '70%',
+    animation: { animateRotate: true, duration: 800 }
+  }
+});
+</script>
+{% endblock %}

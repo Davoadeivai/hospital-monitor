@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HospitalOS — ورود</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --void: #050709;
+      --surface-0: #0a0d12;
+      --surface-1: #0f1419;
+      --surface-2: #151c24;
+      --acid: #00ff88;
+      --acid-dim: #00cc6a;
+      --acid-glow: rgba(0,255,136,0.12);
+      --acid-trace: rgba(0,255,136,0.04);
+      --plasma: #00d4ff;
+      --text-primary: #e8edf2;
+      --text-secondary: #7a8fa6;
+      --text-tertiary: #445566;
+      --border-default: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.15);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Vazirmatn', sans-serif;
+      background: var(--void);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      direction: rtl;
+      overflow: hidden;
+    }
+
+    /* LEFT PANEL — Branding */
+    .login-left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-left::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 70% at 30% 40%, rgba(0,255,136,0.06) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 50% at 70% 70%, rgba(0,212,255,0.04) 0%, transparent 60%),
+        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px);
+    }
+
+    .brand-area {
+      position: relative;
+      z-index: 1;
+      max-width: 480px;
+    }
+
+    .brand-logo {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, var(--acid), var(--plasma));
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      margin-bottom: 32px;
+      position: relative;
+    }
+
+    .brand-logo::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, var(--acid), var(--plasma));
+      opacity: 0.15;
+      z-index: -1;
+    }
+
+    .brand-eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--acid);
+      margin-bottom: 16px;
+    }
+
+    .brand-headline {
+      font-family: 'Syne', sans-serif;
+      font-size: 48px;
+      font-weight: 800;
+      letter-spacing: -3px;
+      line-height: 1.05;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+    }
+
+    .brand-headline span { color: var(--acid); }
+
+    .brand-desc {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      max-width: 380px;
+      margin-bottom: 48px;
+    }
+
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .feature-dot {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      background: var(--acid-glow);
+      border: 1px solid rgba(0,255,136,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    /* RIGHT PANEL — Form */
+    .login-right {
+      width: 440px;
+      background: var(--surface-0);
+      border-right: 1px solid var(--border-default);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 60px 48px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .login-right::before {
+      content: '';
+      position: absolute;
+      top: 0; right: 0; left: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--acid), var(--plasma), transparent);
+      opacity: 0.6;
+    }
+
+    .form-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .form-sub {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--text-tertiary);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 40px;
+    }
+
+    .form-group { margin-bottom: 20px; }
+
+    .form-label {
+      display: block;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-bottom: 8px;
+    }
+
+    .form-field {
+      position: relative;
+    }
+
+    .form-field-icon {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-tertiary);
+      font-size: 14px;
+    }
+
+    .form-input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border-default);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-family: 'Vazirmatn', sans-serif;
+      font-size: 14px;
+      padding: 12px 42px 12px 14px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .form-input:focus {
+      border-color: var(--acid);
+      box-shadow: 0 0 0 3px rgba(0,255,136,0.08);
+    }
+
+    .form-input::placeholder { color: var(--text-tertiary); }
+
+    .submit-btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--acid);
+      color: #050709;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Vazirmatn', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .submit-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0);
+      transition: background 0.15s;
+    }
+
+    .submit-btn:hover {
+      background: var(--acid-dim);
+      box-shadow: 0 0 24px var(--acid-glow);
+      transform: translateY(-1px);
+    }
+
+    .submit-btn:hover::after { background: rgba(255,255,255,0.05); }
+    .submit-btn:active { transform: scale(0.99); }
+
+    .login-footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-default);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--text-tertiary);
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    .error-msg {
+      background: rgba(255,34,68,0.08);
+      border: 1px solid rgba(255,34,68,0.2);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #ff4466;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Animated data streams */
+    .data-stream {
+      position: absolute;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--acid);
+      opacity: 0.08;
+      white-space: nowrap;
+      animation: stream-down 12s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes stream-down {
+      from { transform: translateY(-100vh); }
+      to   { transform: translateY(100vh); }
+    }
+
+    @media (max-width: 900px) {
+      .login-left { display: none; }
+      .login-right { width: 100%; border-right: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Left Panel -->
+  <div class="login-left">
+    <!-- Data streams -->
+    <div class="data-stream" style="left:5%;animation-delay:-2s">T:121.5°C P:1.52bar PWR:14.8kW STATUS:STERILIZING</div>
+    <div class="data-stream" style="left:40%;animation-delay:-5s">COMB:920°C CO:28ppm NOx:145ppm CYCLE:847</div>
+    <div class="data-stream" style="left:75%;animation-delay:-8s">ENERGY:14.2kWh COST:35500 CARBON:8.4kg</div>
+
+    <div class="brand-area">
+      <div class="brand-logo">⚕️</div>
+      <div class="brand-eyebrow">HOSPITAL MONITORING SYSTEM</div>
+      <h1 class="brand-headline">
+        کنترل کامل<br>
+        تجهیزات <span>بیمارستانی</span>
+      </h1>
+      <p class="brand-desc">
+        پلتفرم real-time مانیتورینگ اتوکلاو و زباله‌سوز با محاسبه خودکار
+        انرژی، هزینه، و ردپای کربن — در کلاس جهانی
+      </p>
+
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-dot">📡</div>
+          مانیتورینگ real-time با WebSocket
+        </div>
+        <div class="feature-item">
+          <div class="feature-dot">⚡</div>
+          محاسبه خودکار انرژی و هزینه
+        </div>
+        <div class="feature-item">
+          <div class="feature-dot">🔔</div>
+          سیستم هشدار هوشمند + SMS
+        </div>
+        <div class="feature-item">
+          <div class="feature-dot">🌿</div>
+          ردیابی ردپای کربن
+        </div>
+        <div class="feature-item">
+          <div class="feature-dot">📊</div>
+          گزارش‌های جامع Excel/PDF
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="login-right">
+    <div class="form-title">خوش آمدید</div>
+    <div class="form-sub">SECURE ACCESS — HOSPITAL MONITOR</div>
+
+    {% if form.errors %}
+    <div class="error-msg">
+      <i class="fas fa-exclamation-circle"></i>
+      نام کاربری یا رمز عبور اشتباه است
+    </div>
+    {% endif %}
+
+    <form method="post" autocomplete="on">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">نام کاربری</label>
+        <div class="form-field">
+          <i class="fas fa-user form-field-icon"></i>
+          <input type="text" name="username" class="form-input" placeholder="admin" required autofocus>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">رمز عبور</label>
+        <div class="form-field">
+          <i class="fas fa-lock form-field-icon"></i>
+          <input type="password" name="password" class="form-input" placeholder="••••••••" required>
+        </div>
+      </div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="submit-btn">
+        ورود به سیستم →
+      </button>
+    </form>
+
+    <div class="login-footer">
+      © 2024 HOSPITAL MONITOR — SECURE SYSTEM<br>
+      <span style="color:var(--acid)">v2.0.0</span> — ALL DATA ENCRYPTED
+    </div>
+  </div>
+
+</body>
+</html>

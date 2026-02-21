@@ -1,0 +1,72 @@
+{% extends 'base/base.html' %}
+{% block title %}مدیریت زباله{% endblock %}
+{% block breadcrumb %}WASTE / MANAGEMENT{% endblock %}
+{% block content %}
+
+<div class="page-header fade-up">
+  <div class="page-title-group">
+    <div class="page-eyebrow">WASTE / MANAGEMENT</div>
+    <h1 class="page-title">مدیریت زباله بیمارستانی</h1>
+    <p class="page-subtitle">آمار پردازش زباله به تفکیک نوع و دستگاه</p>
+  </div>
+</div>
+
+<div class="stat-grid fade-up stagger-1">
+  <div class="stat-card accent-green">
+    <div class="stat-header"><div class="stat-icon-wrap">♻️</div></div>
+    <div class="stat-value">{{ total_waste_kg|floatformat:0|default:0 }}</div>
+    <div class="stat-label">کل زباله این ماه (kg)</div>
+  </div>
+  <div class="stat-card accent-blue">
+    <div class="stat-header"><div class="stat-icon-wrap">🦠</div></div>
+    <div class="stat-value">{{ infectious_kg|floatformat:0|default:0 }}</div>
+    <div class="stat-label">زباله عفونی (kg)</div>
+  </div>
+  <div class="stat-card accent-fire">
+    <div class="stat-header"><div class="stat-icon-wrap">🔪</div></div>
+    <div class="stat-value">{{ sharp_kg|floatformat:0|default:0 }}</div>
+    <div class="stat-label">تیز و برنده (kg)</div>
+  </div>
+  <div class="stat-card accent-amber">
+    <div class="stat-header"><div class="stat-icon-wrap">💊</div></div>
+    <div class="stat-value">{{ other_kg|floatformat:0|default:0 }}</div>
+    <div class="stat-label">سایر انواع (kg)</div>
+  </div>
+</div>
+
+<div class="panel mt-6 fade-up stagger-2">
+  <div class="panel-header">
+    <div class="panel-title">📋 لیست سیکل‌های زباله</div>
+    <div class="panel-subtitle">WASTE PROCESSING LOG</div>
+  </div>
+  <div class="panel-body" style="padding:0">
+    <table class="data-table">
+      <thead>
+        <tr><th>دستگاه</th><th>تاریخ</th><th>نوع زباله</th><th>وزن (kg)</th><th>مدت (min)</th><th>اپراتور</th><th>وضعیت</th></tr>
+      </thead>
+      <tbody>
+      {% for c in cycles %}
+      <tr>
+        <td><div class="flex items-center gap-2">
+          <span>{% if c.device.device_type == 'autoclave' %}🔬{% else %}🔥{% endif %}</span>
+          <span class="td-primary">{{ c.device.name }}</span>
+        </div></td>
+        <td class="td-mono" style="font-size:11px;color:var(--text-tertiary)">{{ c.start_time|date:"Y/m/d H:i" }}</td>
+        <td>
+          <span class="badge {% if c.waste_type == 'infectious' %}badge-red{% elif c.waste_type == 'sharp' %}badge-amber{% else %}badge-ghost{% endif %}">
+            {{ c.get_waste_type_display }}
+          </span>
+        </td>
+        <td class="td-mono td-accent">{{ c.waste_weight_kg }} kg</td>
+        <td class="td-mono">{{ c.duration_minutes|default:'—' }}</td>
+        <td class="td-mono" style="font-size:11px">{{ c.operator|default:'—' }}</td>
+        <td><span class="badge {% if c.status == 'complete' %}badge-green{% elif c.status == 'error' %}badge-red{% else %}badge-ghost{% endif %}">{{ c.get_status_display }}</span></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-tertiary)">سیکلی یافت نشد</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

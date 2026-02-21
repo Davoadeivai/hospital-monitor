@@ -1,0 +1,64 @@
+{% extends 'base/base.html' %}
+{% block title %}سرویس و نگهداری{% endblock %}
+{% block breadcrumb %}DEVICES / MAINTENANCE{% endblock %}
+{% block content %}
+
+<div class="page-header fade-up">
+  <div class="page-title-group">
+    <div class="page-eyebrow">DEVICES / MAINTENANCE LOG</div>
+    <h1 class="page-title">لاگ سرویس و نگهداری</h1>
+    <p class="page-subtitle">تاریخچه کامل تعمیرات و سرویس‌های دوره‌ای</p>
+  </div>
+  <a href="/admin/devices/maintenancelog/add/" class="btn btn-primary">
+    <i class="fas fa-plus me-2"></i>ثبت سرویس جدید
+  </a>
+</div>
+
+<div class="panel fade-up stagger-1">
+  <div class="panel-header">
+    <div class="panel-title">🔧 تاریخچه سرویس</div>
+    <div class="panel-subtitle">MAINTENANCE HISTORY</div>
+  </div>
+  <div class="panel-body" style="padding:0">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>دستگاه</th><th>نوع سرویس</th><th>تاریخ</th>
+          <th>تکنیسین</th><th>هزینه (ریال)</th><th>سرویس بعدی</th><th>شرح</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for log in logs %}
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span>{% if log.device.device_type == 'autoclave' %}🔬{% else %}🔥{% endif %}</span>
+            <span class="td-primary">{{ log.device.name }}</span>
+          </div>
+        </td>
+        <td>
+          <span class="badge {% if log.type == 'CM' %}badge-red{% elif log.type == 'PM' %}badge-green{% else %}badge-ghost{% endif %}">
+            {{ log.get_type_display }}
+          </span>
+        </td>
+        <td class="td-mono" style="font-size:11px;color:var(--text-tertiary)">{{ log.date }}</td>
+        <td class="td-mono" style="font-size:12px">{{ log.technician|default:'—' }}</td>
+        <td class="td-mono" style="color:var(--amber)">{{ log.cost|floatformat:0 }}</td>
+        <td class="td-mono" style="font-size:11px;color:{% if log.next_due %}var(--plasma){% else %}var(--text-tertiary){% endif %}">
+          {{ log.next_due|default:'—' }}
+        </td>
+        <td style="font-size:12px;color:var(--text-secondary);max-width:200px">{{ log.description|truncatechars:50 }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" style="text-align:center;padding:60px;color:var(--text-tertiary)">
+          <div style="font-size:32px;margin-bottom:12px">🔧</div>
+          <div style="font-family:var(--font-mono);font-size:11px">هیچ رکورد سرویسی ثبت نشده</div>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

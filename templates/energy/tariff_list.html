@@ -1,0 +1,38 @@
+{% extends 'base/base.html' %}
+{% block title %}تعرفه‌ها{% endblock %}
+{% block breadcrumb %}ENERGY / TARIFFS{% endblock %}
+{% block content %}
+
+<div class="page-header fade-up">
+  <div class="page-title-group">
+    <div class="page-eyebrow">ENERGY / TARIFFS</div>
+    <h1 class="page-title">تعرفه‌های انرژی</h1>
+  </div>
+  <a href="/admin/energy/energytariff/add/" class="btn btn-primary"><i class="fas fa-plus me-2"></i>تعرفه جدید</a>
+</div>
+
+<div class="panel fade-up stagger-1">
+  <div class="panel-header"><div class="panel-title">📋 لیست تعرفه‌ها</div></div>
+  <div class="panel-body" style="padding:0">
+    <table class="data-table">
+      <thead><tr><th>نام</th><th>برق (ریال/kWh)</th><th>آب (ریال/L)</th><th>سوخت (ریال/L)</th><th>از تاریخ</th><th>وضعیت</th></tr></thead>
+      <tbody>
+      {% for t in tariffs %}
+      <tr>
+        <td class="td-primary">{{ t.name }}</td>
+        <td class="td-mono" style="color:var(--amber)">{{ t.electricity_per_kwh }}</td>
+        <td class="td-mono" style="color:var(--plasma)">{{ t.water_per_liter }}</td>
+        <td class="td-mono" style="color:var(--fire)">{{ t.fuel_per_liter }}</td>
+        <td class="td-mono" style="font-size:11px;color:var(--text-tertiary)">{{ t.effective_from }}</td>
+        <td><span class="badge {% if not t.effective_to %}badge-green{% else %}badge-ghost{% endif %}">
+          {% if not t.effective_to %}فعال{% else %}منقضی{% endif %}
+        </span></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-tertiary)">تعرفه‌ای ثبت نشده</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

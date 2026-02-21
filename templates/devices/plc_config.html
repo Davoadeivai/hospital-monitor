@@ -1,0 +1,387 @@
+{% extends 'base/base.html' %}
+{% block title %}اتصال PLC — {{ device.name }}{% endblock %}
+{% block breadcrumb %}DEVICES / PLC CONNECTION{% endblock %}
+
+{% block extra_css %}
+<style>
+.conn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
+.tab-buttons { display: flex; gap: var(--space-2); margin-bottom: var(--space-6); }
+.tab-btn {
+  flex: 1; padding: var(--space-4); border-radius: var(--radius-md);
+  border: 1px solid var(--border-default); background: var(--surface-2);
+  color: var(--text-secondary); cursor: pointer; transition: all 0.2s;
+  text-align: center; font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 1px; text-transform: uppercase;
+}
+.tab-btn.active {
+  background: var(--acid-glow); border-color: var(--acid);
+  color: var(--acid);
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.register-table td:first-child {
+  font-family: var(--font-mono); color: var(--plasma); font-size: 12px; font-weight: 700;
+}
+.register-table td:last-child { color: var(--text-tertiary); font-size: 11px; }
+
+.wiring-diagram {
+  background: var(--void); border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg); padding: var(--space-6);
+  font-family: var(--font-mono); font-size: 12px; line-height: 2.2;
+  color: var(--text-secondary);
+}
+
+.wire-label { display: inline-block; width: 60px; text-align: left; }
+.wire-a { color: var(--crimson); font-weight: 700; }
+.wire-b { color: #444; font-weight: 700; }
+.wire-gnd { color: var(--acid); }
+.arrow { color: var(--text-tertiary); }
+
+.test-result {
+  background: var(--surface-2); border: 1px solid var(--border-default);
+  border-radius: var(--radius-md); padding: var(--space-5);
+  font-family: var(--font-mono); font-size: 12px; line-height: 2;
+  min-height: 100px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header fade-up">
+  <div class="page-title-group">
+    <div class="page-eyebrow">PLC / MODBUS CONNECTION</div>
+    <h1 class="page-title">اتصال به PLC — {{ device.name }}</h1>
+    <p class="page-subtitle">
+      PLC: COTRUST CT Series &nbsp;|&nbsp; HMI: FATEK FBTNxx &nbsp;|&nbsp;
+      <span class="badge {% if device.connection_type == 'sim' %}badge-ghost{% else %}badge-green{% endif %}">
+        {{ device.get_connection_type_display }}
+      </span>
+    </p>
+  </div>
+  <a href="/monitor/{{ device.pk }}/" class="btn btn-ghost">
+    <i class="fas fa-arrow-right me-2"></i>بازگشت به مانیتور
+  </a>
+</div>
+
+<!-- ===== CONNECTION TYPE TABS ===== -->
+<div class="panel fade-up stagger-1">
+  <div class="panel-header">
+    <div class="panel-title">⚙️ نوع اتصال به PLC</div>
+  </div>
+  <div class="panel-body">
+
+    <div class="tab-buttons">
+      <button class="tab-btn {% if device.connection_type == 'sim' %}active{% endif %}"
+              onclick="switchTab('sim', this)">
+        🎮 شبیه‌ساز<br><span style="font-size:9px;opacity:0.7">برای تست</span>
+      </button>
+      <button class="tab-btn {% if device.connection_type == 'rtu' %}active{% endif %}"
+              onclick="switchTab('rtu', this)">
+        🔌 Modbus RTU<br><span style="font-size:9px;opacity:0.7">RS485 کابل</span>
+      </button>
+      <button class="tab-btn {% if device.connection_type == 'tcp' %}active{% endif %}"
+              onclick="switchTab('tcp', this)">
+        🌐 Modbus TCP<br><span style="font-size:9px;opacity:0.7">شبکه Ethernet</span>
+      </button>
+    </div>
+
+    <form method="post" action="/devices/{{ device.pk }}/plc-config/" id="plc-form">
+      {% csrf_token %}
+      <input type="hidden" name="connection_type" id="conn_type_input" value="{{ device.connection_type }}">
+
+      <!-- SIM TAB -->
+      <div class="tab-content {% if device.connection_type == 'sim' %}active{% endif %}" id="tab-sim">
+        <div style="text-align:center;padding:var(--space-8);color:var(--text-secondary)">
+          <div style="font-size:48px;margin-bottom:var(--space-4)">🎮</div>
+          <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:var(--space-2)">
+            حالت شبیه‌ساز
+          </div>
+          <div style="font-size:13px;max-width:400px;margin:0 auto;line-height:1.7">
+            بدون نیاز به سخت‌افزار — داده‌های واقع‌گرایانه سیکل اتوکلاو شبیه‌سازی می‌شه.
+            وقتی سخت‌افزار آماده بود، به RTU یا TCP تغییر بدید.
+          </div>
+        </div>
+      </div>
+
+      <!-- RTU TAB -->
+      <div class="tab-content {% if device.connection_type == 'rtu' %}active{% endif %}" id="tab-rtu">
+        <div class="conn-grid">
+          <div>
+            <div class="form-group">
+              <label class="form-label">پورت سریال</label>
+              <input type="text" name="serial_port" class="form-control"
+                     value="{{ device.serial_port }}"
+                     placeholder="/dev/ttyUSB0 یا COM3">
+              <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);margin-top:4px">
+                Linux: /dev/ttyUSB0 &nbsp;|&nbsp; Windows: COM3
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Baud Rate</label>
+              <select name="baud_rate" class="form-control">
+                {% for br in "9600,19200,38400,57600,115200".split(",") %}
+                <option value="{{ br }}" {% if device.baud_rate|stringformat:"s" == br %}selected{% endif %}>{{ br }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Slave ID</label>
+              <input type="number" name="modbus_slave_id" class="form-control"
+                     value="{{ device.modbus_slave_id }}" min="1" max="247">
+            </div>
+            <div class="form-group">
+              <label class="form-label">فاصله polling (ثانیه)</label>
+              <input type="number" name="polling_interval" class="form-control"
+                     value="{{ device.polling_interval }}" min="1" max="60">
+            </div>
+          </div>
+
+          <!-- Wiring Diagram -->
+          <div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);letter-spacing:2px;text-transform:uppercase;margin-bottom:var(--space-3)">
+              نقشه سیم‌کشی RS485
+            </div>
+            <div class="wiring-diagram">
+              <div>مبدل USB-RS485</div>
+              <div>┌─────────────────┐</div>
+              <div>│ <span class="wire-a">A+</span> ─────────────→ <span class="wire-a">A+</span> PLC COTRUST │</div>
+              <div>│ <span class="wire-b" style="color:var(--text-tertiary)">B-</span> ─────────────→ <span class="wire-b" style="color:var(--text-tertiary)">B-</span> PLC COTRUST │</div>
+              <div>│ <span class="wire-gnd">GND</span> ────────────→ <span class="wire-gnd">GND</span> PLC         │</div>
+              <div>└─────────────────┘</div>
+              <div style="margin-top:var(--space-3);color:var(--text-tertiary)">
+                ⚠️ مقاومت پایانی 120Ω در انتهای خط RS485<br>
+                ⚠️ حداکثر طول کابل: 1200 متر @ 9600 baud
+              </div>
+            </div>
+
+            <div style="margin-top:var(--space-4);background:var(--amber-glow);border:1px solid rgba(255,184,0,0.2);border-radius:var(--radius-md);padding:var(--space-3)">
+              <div style="font-family:var(--font-mono);font-size:10px;color:var(--amber);margin-bottom:4px">⚙️ تنظیم PLC COTRUST</div>
+              <div style="font-size:12px;color:var(--text-secondary);line-height:1.7">
+                در نرم‌افزار COTRUST:<br>
+                Communication → Serial → Mode: RTU<br>
+                Baud: {{ device.baud_rate }} &nbsp;|&nbsp; Parity: None &nbsp;|&nbsp; Station: {{ device.modbus_slave_id }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TCP TAB -->
+      <div class="tab-content {% if device.connection_type == 'tcp' %}active{% endif %}" id="tab-tcp">
+        <div class="conn-grid">
+          <div>
+            <div class="form-group">
+              <label class="form-label">آدرس IP پی‌ال‌سی</label>
+              <input type="text" name="plc_ip" class="form-control"
+                     value="{{ device.plc_ip|default:'' }}"
+                     placeholder="192.168.1.100">
+            </div>
+            <div class="form-group">
+              <label class="form-label">پورت Modbus TCP</label>
+              <input type="number" name="plc_port" class="form-control"
+                     value="{{ device.plc_port }}" placeholder="502">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Slave ID</label>
+              <input type="number" name="modbus_slave_id" class="form-control"
+                     value="{{ device.modbus_slave_id }}" min="1" max="247">
+            </div>
+            <div class="form-group">
+              <label class="form-label">فاصله polling (ثانیه)</label>
+              <input type="number" name="polling_interval" class="form-control"
+                     value="{{ device.polling_interval }}" min="1" max="60">
+            </div>
+          </div>
+
+          <div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);letter-spacing:2px;text-transform:uppercase;margin-bottom:var(--space-3)">
+              راه‌اندازی شبکه
+            </div>
+            <div class="wiring-diagram">
+              <div>Server / Raspberry Pi</div>
+              <div>┌─────────────────────┐</div>
+              <div>│ LAN Port ──Switch──→ LAN Port PLC │</div>
+              <div>└─────────────────────┘</div>
+              <div style="margin-top:var(--space-3);color:var(--text-tertiary)">
+                IP پی‌ال‌سی: {{ device.plc_ip|default:"192.168.1.100" }}<br>
+                Port: {{ device.plc_port }}<br>
+                Protocol: Modbus TCP (FC03/FC05)
+              </div>
+            </div>
+
+            <div style="margin-top:var(--space-4);background:var(--plasma-glow);border:1px solid rgba(0,212,255,0.2);border-radius:var(--radius-md);padding:var(--space-3)">
+              <div style="font-family:var(--font-mono);font-size:10px;color:var(--plasma);margin-bottom:4px">⚙️ تنظیم ماژول Ethernet COTRUST</div>
+              <div style="font-size:12px;color:var(--text-secondary);line-height:1.7">
+                در نرم‌افزار COTRUST:<br>
+                Ethernet → IP: {{ device.plc_ip|default:"192.168.1.100" }}<br>
+                Subnet: 255.255.255.0 &nbsp;|&nbsp; Gateway: 192.168.1.1<br>
+                Modbus TCP Server: Enable
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:var(--space-3);justify-content:flex-end;margin-top:var(--space-6)">
+        <button type="button" class="btn btn-ghost" onclick="testConnection()">
+          <i class="fas fa-plug me-2"></i>تست اتصال
+        </button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-2"></i>ذخیره تنظیمات
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+<!-- ===== TEST RESULT ===== -->
+<div class="panel mt-6 fade-up stagger-2" id="test-panel" style="display:none">
+  <div class="panel-header">
+    <div class="panel-title">🔌 نتیجه تست اتصال</div>
+    <div class="live-ticker"><div class="live-ticker-dot"></div><span style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">در حال تست...</span></div>
+  </div>
+  <div class="panel-body">
+    <div class="test-result" id="test-output">
+      <span style="color:var(--text-tertiary)">در انتظار تست...</span>
+    </div>
+
+    <div id="live-data" style="display:none;margin-top:var(--space-4)">
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);letter-spacing:2px;margin-bottom:var(--space-3)">داده دریافتی از PLC:</div>
+      <div class="gauge-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="gauge-card normal">
+          <div class="gauge-label">TEMPERATURE</div>
+          <div class="gauge-value" id="t-temp">—</div>
+          <div class="gauge-unit">°C</div>
+        </div>
+        <div class="gauge-card normal">
+          <div class="gauge-label">PRESSURE</div>
+          <div class="gauge-value" id="t-press">—</div>
+          <div class="gauge-unit">bar</div>
+        </div>
+        <div class="gauge-card normal">
+          <div class="gauge-label">POWER</div>
+          <div class="gauge-value" id="t-power">—</div>
+          <div class="gauge-unit">kW</div>
+        </div>
+        <div class="gauge-card normal">
+          <div class="gauge-label">STATUS</div>
+          <div class="gauge-value" style="font-size:20px" id="t-status">—</div>
+          <div class="gauge-unit">PHASE</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== REGISTER MAP ===== -->
+<div class="panel mt-6 fade-up stagger-3">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">📋 نقشه رجیسترهای Modbus</div>
+      <div class="panel-subtitle">MODBUS REGISTER MAP — COTRUST PLC</div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="copyRegMap()">
+      <i class="fas fa-copy me-2"></i>کپی
+    </button>
+  </div>
+  <div class="panel-body" style="padding:0">
+    <table class="data-table register-table">
+      <thead>
+        <tr>
+          <th>آدرس (D)</th>
+          <th>پارامتر</th>
+          <th>مقیاس</th>
+          <th>مثال</th>
+          <th>توضیح</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>D0</td><td class="td-primary">دما</td><td class="td-mono">× 10</td><td class="td-mono td-accent">1215</td><td>= 121.5°C</td></tr>
+        <tr><td>D1</td><td class="td-primary">فشار</td><td class="td-mono">× 100</td><td class="td-mono td-accent">152</td><td>= 1.52 bar</td></tr>
+        <tr><td>D2</td><td class="td-primary">جریان بخار</td><td class="td-mono">× 10</td><td class="td-mono td-accent">82</td><td>= 8.2 kg/h</td></tr>
+        <tr><td>D3</td><td class="td-primary">سطح آب</td><td class="td-mono">× 1</td><td class="td-mono td-accent">74</td><td>= 74%</td></tr>
+        <tr><td>D4</td><td class="td-primary">مصرف برق</td><td class="td-mono">× 10</td><td class="td-mono td-accent">148</td><td>= 14.8 kW</td></tr>
+        <tr><td>D5</td><td class="td-primary">وضعیت سیکل</td><td class="td-mono">× 1</td><td class="td-mono td-accent">2</td><td>0=Idle 1=Heating 2=Sterilizing 3=Cooling 4=Complete 5=Error</td></tr>
+        <tr><td>D6</td><td class="td-primary">وضعیت در</td><td class="td-mono">× 1</td><td class="td-mono td-accent">1</td><td>0=باز 1=قفل</td></tr>
+        <tr><td>D7</td><td class="td-primary">وضعیت المنت</td><td class="td-mono">× 1</td><td class="td-mono td-accent">1</td><td>0=خاموش 1=روشن</td></tr>
+        <tr><td>D8</td><td class="td-primary">وضعیت پمپ</td><td class="td-mono">× 1</td><td class="td-mono td-accent">1</td><td>0=خاموش 1=روشن</td></tr>
+        <tr><td>D9</td><td class="td-primary">شماره سیکل جاری</td><td class="td-mono">× 1</td><td class="td-mono td-accent">847</td><td>شماره سیکل فعال</td></tr>
+        <tr><td>D10</td><td class="td-primary">کل سیکل‌ها</td><td class="td-mono">× 1</td><td class="td-mono td-accent">2143</td><td>طول عمر دستگاه</td></tr>
+        <tr><td>D11</td><td class="td-primary">کد هشدار</td><td class="td-mono">× 1</td><td class="td-mono td-accent">0</td><td>0=Normal, 1-11=خطاهای مختلف</td></tr>
+      </tbody>
+    </table>
+    <div style="padding:var(--space-4) var(--space-6);border-top:1px solid var(--border-subtle)">
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);letter-spacing:1px;margin-bottom:var(--space-2)">COIL MAP (Outputs از Django به PLC):</div>
+      <div style="display:flex;gap:var(--space-6);font-size:12px;color:var(--text-secondary)">
+        <span><span style="color:var(--plasma);font-family:var(--font-mono)">M0</span> = شروع سیکل از راه دور</span>
+        <span><span style="color:var(--plasma);font-family:var(--font-mono)">M1</span> = توقف/لغو سیکل</span>
+        <span><span style="color:var(--plasma);font-family:var(--font-mono)">M2</span> = قفل در</span>
+        <span><span style="color:var(--plasma);font-family:var(--font-mono)">M3</span> = ریست هشدار</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('conn_type_input').value = name;
+}
+
+async function testConnection() {
+  const panel = document.getElementById('test-panel');
+  const output = document.getElementById('test-output');
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth' });
+
+  output.innerHTML = '<span style="color:var(--amber)">⏳ در حال اتصال...</span>';
+
+  try {
+    const res = await fetch('/devices/{{ device.pk }}/plc-test/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCsrf() }
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      const r = data.reading;
+      output.innerHTML = `
+        <span style="color:var(--acid)">✅ اتصال موفق</span><br>
+        <span style="color:var(--text-tertiary)">دما: </span><span style="color:var(--fire)">${r.temperature}°C</span> &nbsp;
+        <span style="color:var(--text-tertiary)">فشار: </span><span style="color:var(--plasma)">${r.pressure} bar</span> &nbsp;
+        <span style="color:var(--text-tertiary)">برق: </span><span style="color:var(--amber)">${r.power} kW</span><br>
+        <span style="color:var(--text-tertiary)">وضعیت: </span><span style="color:var(--text-primary)">${r.status}</span> &nbsp;
+        <span style="color:var(--text-tertiary)">هشدار: </span><span style="color:${r.alarm_code ? 'var(--crimson)' : 'var(--acid)'}">${r.alarm_message || 'Normal'}</span>
+      `;
+      document.getElementById('live-data').style.display = 'block';
+      document.getElementById('t-temp').textContent = r.temperature;
+      document.getElementById('t-press').textContent = r.pressure;
+      document.getElementById('t-power').textContent = r.power;
+      document.getElementById('t-status').textContent = r.status.toUpperCase();
+      showToast('اتصال به PLC موفق بود', 'success');
+    } else {
+      output.innerHTML = `<span style="color:var(--crimson)">❌ ${data.error}</span><br>
+        <span style="color:var(--text-tertiary)">تنظیمات را بررسی کنید و مجدداً تست کنید.</span>`;
+      showToast('خطا در اتصال به PLC', 'error');
+    }
+  } catch(e) {
+    output.innerHTML = `<span style="color:var(--crimson)">❌ خطای شبکه: ${e.message}</span>`;
+  }
+}
+
+function copyRegMap() {
+  const map = `D0=دما(×10), D1=فشار(×100), D2=جریان بخار(×10), D3=سطح آب, D4=برق(×10), D5=وضعیت, D6=در, D7=المنت, D8=پمپ, D9=شماره سیکل, D10=کل سیکل, D11=کد هشدار`;
+  navigator.clipboard.writeText(map);
+  showToast('نقشه رجیسترها کپی شد', 'success');
+}
+</script>
+{% endblock %}

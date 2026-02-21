@@ -1,0 +1,97 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ device.name }}{% endblock %}
+{% block breadcrumb %}DEVICES / DETAIL{% endblock %}
+{% block content %}
+
+<div class="page-header fade-up">
+  <div class="page-title-group">
+    <div class="page-eyebrow">DEVICES / {{ device.serial_number }}</div>
+    <h1 class="page-title">{{ device.name }}</h1>
+    <p class="page-subtitle">
+      {{ device.get_device_type_display }} &nbsp;|&nbsp;
+      ظرفیت {{ device.capacity_kg }} kg &nbsp;|&nbsp;
+      توان {{ device.power_kw }} kW
+    </p>
+  </div>
+  <div style="display:flex;gap:12px">
+    <a href="/monitor/{{ device.pk }}/" class="btn btn-primary">
+      <i class="fas fa-chart-line me-2"></i>مانیتور Real-time
+    </a>
+    <a href="/devices/{{ device.pk }}/plc-config/" class="btn btn-ghost">
+      <i class="fas fa-plug me-2"></i>تنظیم PLC
+    </a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+
+  <div class="panel fade-up stagger-1">
+    <div class="panel-header"><div class="panel-title">📋 مشخصات دستگاه</div></div>
+    <div class="panel-body">
+      <table style="width:100%;border-collapse:collapse">
+        {% for label, value in device_info %}
+        <tr style="border-bottom:1px solid var(--border-subtle)">
+          <td style="padding:10px 0;font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:1px;width:40%">{{ label }}</td>
+          <td style="padding:10px 0;font-size:13px;color:var(--text-primary)">{{ value|default:'—' }}</td>
+        </tr>
+        {% endfor %}
+        <tr style="border-bottom:1px solid var(--border-subtle)">
+          <td style="padding:10px 0;font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:1px">وضعیت</td>
+          <td style="padding:10px 0">
+            <span class="badge {% if device.status == 'online' %}badge-green{% elif device.status == 'error' %}badge-red{% else %}badge-ghost{% endif %}">
+              {{ device.get_status_display }}
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:1px">اتصال PLC</td>
+          <td style="padding:10px 0">
+            <span class="badge {% if device.connection_type != 'sim' %}badge-green{% else %}badge-ghost{% endif %}">
+              {{ device.get_connection_type_display }}
+            </span>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel fade-up stagger-2">
+    <div class="panel-header">
+      <div class="panel-title">🔧 آخرین سرویس‌ها</div>
+      <a href="/devices/maintenance/" class="btn btn-ghost btn-sm">همه</a>
+    </div>
+    <div class="panel-body" style="padding:0">
+      <table class="data-table">
+        <thead><tr><th>نوع</th><th>تاریخ</th><th>تکنیسین</th><th>هزینه</th></tr></thead>
+        <tbody>
+        {% for log in maintenance_logs %}
+        <tr>
+          <td><span class="badge {% if log.type == 'CM' %}badge-red{% else %}badge-green{% endif %}">{{ log.get_type_display }}</span></td>
+          <td class="td-mono" style="font-size:11px">{{ log.date }}</td>
+          <td style="font-size:12px">{{ log.technician|default:'—' }}</td>
+          <td class="td-mono" style="color:var(--amber)">{{ log.cost|floatformat:0 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-tertiary);font-size:12px">سرویسی ثبت نشده</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const deviceInfo = [
+  {% if device.manufacturer %}['سازنده', '{{ device.manufacturer }}'],{% endif %}
+  {% if device.model_number %}['مدل', '{{ device.model_number }}'],{% endif %}
+  {% if device.serial_number %}['سریال', '{{ device.serial_number }}'],{% endif %}
+  {% if device.department %}['بخش', '{{ device.department }}'],{% endif %}
+  ['ظرفیت', '{{ device.capacity_kg }} kg'],
+  ['توان', '{{ device.power_kw }} kW'],
+  {% if device.steam_pressure_bar %}['فشار بخار', '{{ device.steam_pressure_bar }} bar'],{% endif %}
+  {% if device.installed_at %}['تاریخ نصب', '{{ device.installed_at }}'],{% endif %}
+  {% if device.next_maintenance %}['سرویس بعدی', '{{ device.next_maintenance }}'],{% endif %}
+];
+</script>
+{% endblock %}

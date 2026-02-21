@@ -1,0 +1,77 @@
+{% extends 'base/base.html' %}
+{% block title %}هزینه‌ها{% endblock %}
+{% block breadcrumb %}COSTS / DASHBOARD{% endblock %}
+{% block content %}
+
+<div class="page-header fade-up">
+  <div class="page-title-group">
+    <div class="page-eyebrow">COSTS / CYCLE ANALYSIS</div>
+    <h1 class="page-title">جزئیات هزینه سیکل‌ها</h1>
+    <p class="page-subtitle">محاسبه دقیق هزینه برق، آب و هزینه به ازای هر kg زباله</p>
+  </div>
+  <a href="/reports/export/" class="btn btn-primary"><i class="fas fa-download me-2"></i>Excel</a>
+</div>
+
+<div class="stat-grid fade-up stagger-1">
+  <div class="stat-card accent-amber">
+    <div class="stat-header"><div class="stat-icon-wrap">💰</div></div>
+    <div class="stat-value" style="font-size:26px">{{ month_total|floatformat:0|default:0 }}</div>
+    <div class="stat-label">هزینه این ماه (ریال)</div>
+  </div>
+  <div class="stat-card accent-blue">
+    <div class="stat-header"><div class="stat-icon-wrap">⚡</div></div>
+    <div class="stat-value">{{ month_kwh|floatformat:0|default:0 }}</div>
+    <div class="stat-label">مصرف برق (kWh)</div>
+  </div>
+  <div class="stat-card accent-green">
+    <div class="stat-header"><div class="stat-icon-wrap">📊</div></div>
+    <div class="stat-value">{{ avg_cost_per_kg|floatformat:0|default:0 }}</div>
+    <div class="stat-label">میانگین هزینه/kg</div>
+  </div>
+  <div class="stat-card accent-fire">
+    <div class="stat-header"><div class="stat-icon-wrap">🔄</div></div>
+    <div class="stat-value">{{ total_cycles|default:0 }}</div>
+    <div class="stat-label">تعداد سیکل</div>
+  </div>
+</div>
+
+<div class="panel mt-6 fade-up stagger-2">
+  <div class="panel-header">
+    <div class="panel-title">💳 جزئیات هزینه سیکل‌ها</div>
+    <div class="panel-subtitle">CYCLE COST BREAKDOWN</div>
+  </div>
+  <div class="panel-body" style="padding:0">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>دستگاه</th><th>سیکل</th><th>نوع زباله</th>
+          <th>برق (kWh)</th><th>هزینه برق</th>
+          <th>آب (L)</th><th>هزینه آب</th>
+          <th>کربن (kg)</th><th>هزینه کل</th><th>هزینه/kg</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in records %}
+      <tr>
+        <td><div class="flex items-center gap-2">
+          <span>{% if r.cycle.device.device_type == 'autoclave' %}🔬{% else %}🔥{% endif %}</span>
+          <span class="td-primary">{{ r.cycle.device.name }}</span>
+        </div></td>
+        <td class="td-mono" style="color:var(--text-tertiary)">#{{ r.cycle.cycle_number }}</td>
+        <td><span class="badge badge-ghost">{{ r.cycle.get_waste_type_display }}</span></td>
+        <td class="td-mono" style="color:var(--amber)">{{ r.electricity_kwh|floatformat:2 }}</td>
+        <td class="td-mono">{{ r.electricity_cost|floatformat:0 }}</td>
+        <td class="td-mono" style="color:var(--plasma)">{{ r.water_liter|floatformat:0 }}</td>
+        <td class="td-mono">{{ r.water_cost|floatformat:0 }}</td>
+        <td class="td-mono" style="color:var(--acid)">{{ r.carbon_footprint_kg|floatformat:1 }}</td>
+        <td class="td-mono" style="color:var(--crimson);font-weight:700">{{ r.total_cost|floatformat:0 }}</td>
+        <td class="td-mono" style="color:var(--fire)">{{ r.cost_per_kg|floatformat:0 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-tertiary)">داده‌ای یافت نشد</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

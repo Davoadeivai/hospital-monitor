@@ -1415,3 +1415,268 @@ select.form-control { cursor: pointer; }
   .main-content { margin-right: 0 !important; }
   body { background: white; color: black; }
 }
+
+/* ============================================================
+   RESPONSIVE — MOBILE FIRST FIX
+   ============================================================ */
+
+/* Overlay پشت sidebar در موبایل */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 999;
+  backdrop-filter: blur(2px);
+}
+.sidebar-overlay.show { display: block; }
+
+/* ===== موبایل (تا 768px) ===== */
+@media (max-width: 768px) {
+
+  /* دکمه hamburger همیشه نشون بده */
+  #sidebar-toggle {
+    display: flex !important;
+  }
+
+  /* sidebar به صورت drawer از سمت راست */
+  .sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    height: 100vh !important;
+    width: 280px !important;
+    z-index: 1000 !important;
+    transform: translateX(100%) !important;
+    transition: transform 0.3s var(--ease-smooth) !important;
+    box-shadow: none;
+  }
+
+  .sidebar.open {
+    transform: translateX(0) !important;
+    box-shadow: -20px 0 60px rgba(0,0,0,0.7) !important;
+  }
+
+  /* محتوای اصلی تمام عرض */
+  .main-content {
+    margin-right: 0 !important;
+    width: 100% !important;
+  }
+
+  /* topbar فشرده‌تر */
+  .topbar {
+    padding: 0 var(--space-3) !important;
+    gap: var(--space-2) !important;
+  }
+
+  .topbar-breadcrumb {
+    font-size: 10px !important;
+  }
+
+  .breadcrumb-parent { display: none; }
+  .breadcrumb-sep { display: none; }
+
+  /* محتوا padding کمتر */
+  .page-content {
+    padding: var(--space-3) !important;
+  }
+
+  /* page header عمودی */
+  .page-header {
+    flex-direction: column !important;
+    gap: var(--space-3) !important;
+    margin-bottom: var(--space-4) !important;
+  }
+
+  .page-title {
+    font-size: 20px !important;
+  }
+
+  .page-header .btn,
+  .page-header > div:last-child {
+    width: 100%;
+  }
+
+  .page-header .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* stat grid 2 ستونه */
+  .stat-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: var(--space-2) !important;
+  }
+
+  .stat-card {
+    padding: var(--space-4) !important;
+  }
+
+  .stat-value {
+    font-size: 24px !important;
+    letter-spacing: -1px !important;
+  }
+
+  .stat-icon-wrap {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 14px !important;
+  }
+
+  /* grid ها یک ستونه */
+  .grid-2,
+  .grid-3,
+  .grid-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* device grid یک ستونه */
+  .device-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* gauge grid 2 ستونه */
+  .gauge-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .gauge-value {
+    font-size: 28px !important;
+    letter-spacing: -1px !important;
+  }
+
+  /* جدول اسکرول افقی */
+  .panel-body {
+    overflow-x: auto !important;
+    padding: var(--space-3) !important;
+  }
+
+  .data-table {
+    min-width: 500px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: var(--space-2) var(--space-3) !important;
+    font-size: 12px !important;
+  }
+
+  /* panel header فشرده */
+  .panel-header {
+    padding: var(--space-3) var(--space-4) !important;
+    flex-wrap: wrap;
+    gap: var(--space-2) !important;
+  }
+
+  .panel-title {
+    font-size: 13px !important;
+  }
+
+  /* دکمه‌ها کوچکتر */
+  .btn {
+    font-size: 12px !important;
+    padding: 7px 12px !important;
+  }
+
+  .btn-icon {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  /* alert item فشرده */
+  .alert-item {
+    padding: var(--space-3) !important;
+    gap: var(--space-2) !important;
+  }
+
+  .alert-title { font-size: 12px !important; }
+  .alert-desc  { font-size: 11px !important; }
+
+  /* toast از پایین وسط */
+  .toast-container {
+    left: var(--space-3) !important;
+    right: var(--space-3) !important;
+    bottom: var(--space-3) !important;
+  }
+
+  .toast {
+    min-width: unset !important;
+    width: 100%;
+  }
+
+  /* modal تمام عرض */
+  .modal-box {
+    max-width: 100% !important;
+    margin: var(--space-4) !important;
+    padding: var(--space-5) !important;
+  }
+
+  /* carbon meter فونت کوچکتر */
+  .carbon-meter-value {
+    font-size: 36px !important;
+  }
+
+  /* cycle timeline اسکرول */
+  .cycle-timeline {
+    overflow-x: auto !important;
+    min-width: 100%;
+  }
+}
+
+/* ===== تبلت (769px تا 1024px) ===== */
+@media (min-width: 769px) and (max-width: 1024px) {
+
+  :root { --sidebar-w: 230px; }
+
+  .main-content {
+    margin-right: var(--sidebar-w) !important;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .device-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .page-content {
+    padding: var(--space-5) !important;
+  }
+
+  .page-title {
+    font-size: 22px !important;
+  }
+
+  .gauge-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+/* ===== صفحه‌های خیلی کوچک (تا 400px) ===== */
+@media (max-width: 400px) {
+
+  .stat-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .gauge-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .gauge-value {
+    font-size: 22px !important;
+  }
+
+  .page-title {
+    font-size: 18px !important;
+  }
+
+  .sidebar {
+    width: 100% !important;
+  }
+}

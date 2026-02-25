@@ -1,20 +1,17 @@
 """
-Django Settings for Render Production
-Hospital Monitor Project
+Production Settings for Render
+Hospital Monitor
 """
 
 import os
 from pathlib import Path
 import dj_database_url
 
-# ─────────────────────────────────────
-# Base
-# ─────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ─────────────────────────────────────
-# Security
-# ─────────────────────────────────────
+# ─────────────────────────────
+# SECURITY
+# ─────────────────────────────
 SECRET_KEY = os.environ.get("SECRET_KEY", "unsafe-secret-key")
 
 DEBUG = False
@@ -25,11 +22,10 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
 ]
 
-# ─────────────────────────────────────
-# Applications
-# ─────────────────────────────────────
+# ─────────────────────────────
+# APPLICATIONS
+# ─────────────────────────────
 INSTALLED_APPS = [
-    # Django Core
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -37,12 +33,11 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # Third Party
     "rest_framework",
-    "rest_framework.authtoken",
     "corsheaders",
+    "django_jazzmin",
 
-    # Local Apps
+    # Local apps
     "apps.devices",
     "apps.monitoring",
     "apps.energy",
@@ -52,9 +47,9 @@ INSTALLED_APPS = [
     "apps.waste",
 ]
 
-# ─────────────────────────────────────
-# Middleware
-# ─────────────────────────────────────
+# ─────────────────────────────
+# MIDDLEWARE
+# ─────────────────────────────
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -67,11 +62,15 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# ─────────────────────────────────────
-# Templates
-# ─────────────────────────────────────
+# ─────────────────────────────
+# URL & WSGI
+# ─────────────────────────────
 ROOT_URLCONF = "config.urls"
+WSGI_APPLICATION = "config.wsgi.application"
 
+# ─────────────────────────────
+# TEMPLATES
+# ─────────────────────────────
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -88,11 +87,9 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "config.wsgi.application"
-
-# ─────────────────────────────────────
-# Database (Render PostgreSQL)
-# ─────────────────────────────────────
+# ─────────────────────────────
+# DATABASE
+# ─────────────────────────────
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if DATABASE_URL:
@@ -111,9 +108,9 @@ else:
         }
     }
 
-# ─────────────────────────────────────
-# Static Files (WhiteNoise)
-# ─────────────────────────────────────
+# ─────────────────────────────
+# STATIC FILES (WhiteNoise)
+# ─────────────────────────────
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
@@ -123,40 +120,38 @@ STORAGES = {
     },
 }
 
-# ─────────────────────────────────────
-# Media (Temporary on Render)
-# ─────────────────────────────────────
+# ─────────────────────────────
+# MEDIA (Temporary)
+# ─────────────────────────────
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# ─────────────────────────────────────
-# Security (Render HTTPS)
-# ─────────────────────────────────────
+# ─────────────────────────────
+# SECURITY (Render HTTPS)
+# ─────────────────────────────
 CSRF_TRUSTED_ORIGINS = [
     "https://hospital-monitor-9f8z.onrender.com",
 ]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
-# ─────────────────────────────────────
-# Internationalization
-# ─────────────────────────────────────
+# ─────────────────────────────
+# INTERNATIONAL
+# ─────────────────────────────
 LANGUAGE_CODE = "fa-ir"
 TIME_ZONE = "Asia/Tehran"
 USE_I18N = True
 USE_TZ = True
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ─────────────────────────────────────
-# REST Framework
-# ─────────────────────────────────────
+# ─────────────────────────────
+# REST FRAMEWORK
+# ─────────────────────────────
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",

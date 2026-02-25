@@ -12,12 +12,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# collectstatic
 RUN python manage.py collectstatic --noinput
 
-EXPOSE 8000
-
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]
+# اجرای migrate + اجرای gunicorn با PORT داینامیک
+CMD python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT

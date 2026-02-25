@@ -1,17 +1,31 @@
+# config/settings.py
+
 import os
 from pathlib import Path
 
-# Base directory
+# ────────────────────────────────────────────────
+# Base Directory
+# ────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Security
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "replace-this-with-a-secure-key")
-DEBUG = os.environ.get("DEBUG", "True") == "True"   # در Render بهتر است False باشد
-ALLOWED_HOSTS = ["*"]   # برای تست Render رایگان – بعداً دامنه واقعی بگذار
+# ────────────────────────────────────────────────
+# Security & Environment
+# ────────────────────────────────────────────────
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-default-key-change-me")
+DEBUG = os.environ.get("DEBUG", "True") == "True"           # در Render → False کن
 
-# Installed apps
+ALLOWED_HOSTS = [
+    '*',                                 # برای تست Render رایگان
+    'hospital-monitor-9f8z.onrender.com',  # دامنه Render خودت
+    '127.0.0.1',
+    'localhost',
+]
+
+# ────────────────────────────────────────────────
+# Installed Apps
+# ────────────────────────────────────────────────
 INSTALLED_APPS = [
-    # اپ‌های پیش‌فرض Django
+    # Django defaults
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -19,21 +33,23 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # اپ‌های ثالث
+    # Third-party
     "rest_framework",
     "corsheaders",
     "jazzmin",
 
-    # اپ‌های خود پروژه
+    # Your apps
     "apps.devices",
     "apps.monitoring",
-    "apps.energy",  # اضافه شده
+    "apps.energy",
 ]
 
+# ────────────────────────────────────────────────
 # Middleware
+# ────────────────────────────────────────────────
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",  # حتماً زودتر از بقیه
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # حتماً نزدیک اول
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -43,12 +59,17 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# URL and WSGI/ASGI
+# ────────────────────────────────────────────────
+# URL / WSGI / ASGI
+# ────────────────────────────────────────────────
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-# Database (SQLite برای Render رایگان – بعداً می‌توان PostgreSQL گذاشت)
+# ────────────────────────────────────────────────
+# Database (SQLite برای Render رایگان)
+# بعداً می‌توانی به PostgreSQL تغییر بدی
+# ────────────────────────────────────────────────
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -56,7 +77,9 @@ DATABASES = {
     }
 }
 
+# ────────────────────────────────────────────────
 # Templates
+# ────────────────────────────────────────────────
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -73,7 +96,9 @@ TEMPLATES = [
     },
 ]
 
+# ────────────────────────────────────────────────
 # Password validation
+# ────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -81,34 +106,53 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# ────────────────────────────────────────────────
 # Internationalization
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+# ────────────────────────────────────────────────
+LANGUAGE_CODE = "fa-ir"     # فارسی – اگر می‌خوای
+TIME_ZONE = "Asia/Tehran"   # ایران
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JS, Images)
+# ────────────────────────────────────────────────
+# Static files (WhiteNoise + Render)
+# ────────────────────────────────────────────────
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
+# مهم برای رفع خطای .map در collectstatic
+WHITENOISE_MANIFEST_STRICT = False
+WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ('map',)
+
+# ────────────────────────────────────────────────
 # Media files
+# ────────────────────────────────────────────────
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# CORS
+# ────────────────────────────────────────────────
+# CORS (برای توسعه باز – در تولید محدود کن)
+# ────────────────────────────────────────────────
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Default primary key
+# ────────────────────────────────────────────────
+# Default primary key field
+# ────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# REST Framework
+# ────────────────────────────────────────────────
+# Django REST Framework
+# ────────────────────────────────────────────────
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ]
 }
 
-# Email (برای تست – در تولید واقعی تغییر بده)
+# ────────────────────────────────────────────────
+# Email (console برای توسعه)
+# ────────────────────────────────────────────────
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

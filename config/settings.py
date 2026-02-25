@@ -9,14 +9,16 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ────────────────────────────────────────────────
-# Security & Environment
+# Security & Environment Variables
 # ────────────────────────────────────────────────
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-default-key-change-me")
-DEBUG = os.environ.get("DEBUG", "True") == "True"           # در Render → False کن
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-default-key-change-me-immediately")
+
+# در Render حتماً متغیر DEBUG=False بگذار
+DEBUG = os.environ.get("DEBUG", "True") == "True"
 
 ALLOWED_HOSTS = [
-    '*',                                 # برای تست Render رایگان
-    'hospital-monitor-9f8z.onrender.com',  # دامنه Render خودت
+    '*',                                      # برای تست اولیه
+    'hospital-monitor-9f8z.onrender.com',    # دامنه واقعی Render تو
     '127.0.0.1',
     'localhost',
 ]
@@ -25,7 +27,6 @@ ALLOWED_HOSTS = [
 # Installed Apps
 # ────────────────────────────────────────────────
 INSTALLED_APPS = [
-    # Django defaults
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -33,12 +34,12 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # Third-party
+    # third-party
     "rest_framework",
     "corsheaders",
     "jazzmin",
 
-    # Your apps
+    # your apps
     "apps.devices",
     "apps.monitoring",
     "apps.energy",
@@ -49,7 +50,7 @@ INSTALLED_APPS = [
 # ────────────────────────────────────────────────
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",  # حتماً نزدیک اول
+    "whitenoise.middleware.WhiteNoiseMiddleware",          # حتماً نزدیک اول
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -60,7 +61,7 @@ MIDDLEWARE = [
 ]
 
 # ────────────────────────────────────────────────
-# URL / WSGI / ASGI
+# URLs & WSGI/ASGI
 # ────────────────────────────────────────────────
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
@@ -68,7 +69,6 @@ ASGI_APPLICATION = "config.asgi.application"
 
 # ────────────────────────────────────────────────
 # Database (SQLite برای Render رایگان)
-# بعداً می‌توانی به PostgreSQL تغییر بدی
 # ────────────────────────────────────────────────
 DATABASES = {
     "default": {
@@ -107,10 +107,10 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # ────────────────────────────────────────────────
-# Internationalization
+# Internationalization & Time
 # ────────────────────────────────────────────────
-LANGUAGE_CODE = "fa-ir"     # فارسی – اگر می‌خوای
-TIME_ZONE = "Asia/Tehran"   # ایران
+LANGUAGE_CODE = "fa-ir"
+TIME_ZONE = "Asia/Tehran"
 USE_I18N = True
 USE_TZ = True
 
@@ -123,7 +123,7 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# مهم برای رفع خطای .map در collectstatic
+# مهم‌ترین بخش برای رفع خطای فعلی (فایل .map)
 WHITENOISE_MANIFEST_STRICT = False
 WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ('map',)
 
@@ -139,13 +139,10 @@ MEDIA_ROOT = BASE_DIR / "media"
 CORS_ALLOW_ALL_ORIGINS = True
 
 # ────────────────────────────────────────────────
-# Default primary key field
+# Default primary key & REST Framework
 # ────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ────────────────────────────────────────────────
-# Django REST Framework
-# ────────────────────────────────────────────────
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",

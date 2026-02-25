@@ -1,34 +1,34 @@
-# Use slim Python 3.11 image
+# استفاده از python:3.11-slim (سبک و امن)
 FROM python:3.11-slim
 
-# Prevent Python from writing .pyc files and enable unbuffered output
+# جلوگیری از تولید .pyc و فعال کردن خروجی بدون بافر
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Set working directory
+# دایرکتوری کاری
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# نصب وابستگی‌های سیستم (فقط چیزهای لازم)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip
+# ارتقا pip
 RUN pip install --upgrade pip
 
-# Copy requirements and install
+# کپی requirements و نصب پکیج‌ها
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
+# کپی کل پروژه
 COPY . .
 
-# Collect static files (no Celery now)
-RUN python manage.py collectstatic --noinput
+# جمع‌آوری فایل‌های استاتیک (با --clear برای پاک کردن قدیمی‌ها)
+RUN python manage.py collectstatic --noinput --clear
 
-# Expose port 8000
+# پورت 8000 را expose کن
 EXPOSE 8000
 
-# Command to run the app with Gunicorn (ASGI if you want Daphne, می‌تونیم تغییر بدیم)
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
+# اجرای برنامه با Gunicorn (برای WSGI)
+# اگر از Channels استفاده می‌کنی، می‌توانی به Daphne تغییر دهی
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application", "--workers", "3", "--timeout", "120"]

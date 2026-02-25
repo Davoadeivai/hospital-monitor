@@ -9,12 +9,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Security & Environment
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-default-key-change-me")
 
-# در Render حتماً متغیر محیطی DEBUG=False بگذار
+# در Render حتماً متغیر DEBUG=False بگذار
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
 ALLOWED_HOSTS = [
-    '*',                                      # برای تست اولیه و Render رایگان
-    'hospital-monitor-9f8z.onrender.com',    # دامنه واقعی پروژه‌ات
+    '*',                                      # تست اولیه و Render رایگان
+    'hospital-monitor-9f8z.onrender.com',    # دامنه پروژه‌ات
     '127.0.0.1',
     'localhost',
 ]
@@ -28,12 +28,10 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # Third-party
     "rest_framework",
     "corsheaders",
     "jazzmin",
 
-    # Your apps
     "apps.devices",
     "apps.monitoring",
     "apps.energy",
@@ -42,7 +40,7 @@ INSTALLED_APPS = [
 # Middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",  # بسیار مهم: نزدیک بالای لیست
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # نزدیک اول
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -101,17 +99,14 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
-# این دو خط دقیقاً مشکل فایل .map را حل می‌کنند
-WHITENOISE_MANIFEST_STRICT = False
-WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ('map',)
+# تغییر مهم: بدون Manifest تا خطای .map ندهد
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 # Media files
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# CORS (برای تست باز – بعداً در تولید محدود کن)
+# CORS (برای تست باز – در تولید محدود کن)
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Default primary key

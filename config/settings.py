@@ -1,30 +1,20 @@
-"""
-Production Settings for Render
-Hospital Monitor
-"""
-
+# config/settings.py
 import os
 from pathlib import Path
-import dj_database_url
 
+# مسیر پایه پروژه
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ─────────────────────────────
-# SECURITY
-# ─────────────────────────────
-SECRET_KEY = os.environ.get("SECRET_KEY", "unsafe-secret-key")
+# ------------------------------
+# تنظیمات امنیتی
+# ------------------------------
+SECRET_KEY = os.environ.get("SECRET_KEY", "your-secret-key")
+DEBUG = os.environ.get("DEBUG", "True") == "True"
+ALLOWED_HOSTS = ["*"]  # در نسخه تست / رایگان برای Render
 
-DEBUG = False
-
-ALLOWED_HOSTS = [
-    "hospital-monitor-9f8z.onrender.com",
-    "localhost",
-    "127.0.0.1",
-]
-
-# ─────────────────────────────
-# APPLICATIONS
-# ─────────────────────────────
+# ------------------------------
+# اپ‌ها
+# ------------------------------
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -33,129 +23,84 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
+    # اپ‌های شما
     "rest_framework",
     "corsheaders",
-    "django_jazzmin",
-
-    # Local apps
-    "apps.devices",
-    "apps.monitoring",
-    "apps.energy",
-    "apps.costs",
-    "apps.reports",
-    "apps.alerts",
-    "apps.waste",
+    "jazzmin",
 ]
 
-# ─────────────────────────────
-# MIDDLEWARE
-# ─────────────────────────────
+# ------------------------------
+# Middleware
+# ------------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # مهم: قبل از StaticFilesMiddleware
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# ─────────────────────────────
-# URL & WSGI
-# ─────────────────────────────
+# ------------------------------
+# URL / WSGI / ASGI
+# ------------------------------
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
 
-# ─────────────────────────────
-# TEMPLATES
-# ─────────────────────────────
-TEMPLATES = [
-    {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
-        "APP_DIRS": True,
-        "OPTIONS": {
-            "context_processors": [
-                "django.template.context_processors.debug",
-                "django.template.context_processors.request",
-                "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
-            ],
-        },
-    },
+# ------------------------------
+# دیتابیس (SQLite ساده)
+# ------------------------------
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
+
+# ------------------------------
+# Password validation
+# ------------------------------
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# ─────────────────────────────
-# DATABASE
-# ─────────────────────────────
-DATABASE_URL = os.environ.get("DATABASE_URL")
+# ------------------------------
+# بین المللی / زمان
+# ------------------------------
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "UTC"
+USE_I18N = True
+USE_TZ = True
 
-if DATABASE_URL:
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=True
-        )
-    }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
-
-# ─────────────────────────────
-# STATIC FILES (WhiteNoise)
-# ─────────────────────────────
+# ------------------------------
+# استاتیک و رسانه
+# ------------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-STORAGES = {
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
+# WhiteNoise برای سرو فایل‌های استاتیک
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# ─────────────────────────────
-# MEDIA (Temporary)
-# ─────────────────────────────
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# ─────────────────────────────
-# SECURITY (Render HTTPS)
-# ─────────────────────────────
-CSRF_TRUSTED_ORIGINS = [
-    "https://hospital-monitor-9f8z.onrender.com",
-]
-
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-
-# ─────────────────────────────
-# INTERNATIONAL
-# ─────────────────────────────
-LANGUAGE_CODE = "fa-ir"
-TIME_ZONE = "Asia/Tehran"
-USE_I18N = True
-USE_TZ = True
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-# ─────────────────────────────
-# REST FRAMEWORK
-# ─────────────────────────────
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-}
-
+# ------------------------------
+# CORS
+# ------------------------------
 CORS_ALLOW_ALL_ORIGINS = True
+
+# ------------------------------
+# Django REST Framework
+# ------------------------------
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
+    ]
+}

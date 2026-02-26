@@ -28,9 +28,10 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
+    "jazzmin",
     "rest_framework",
     "corsheaders",
-    "jazzmin",
+    
 
     "apps.devices",
     "apps.monitoring",

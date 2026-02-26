@@ -8,9 +8,10 @@ ENV PYTHONUNBUFFERED=1
 # دایرکتوری کاری
 WORKDIR /app
 
-# نصب وابستگی‌های سیستم (فقط چیزهای لازم)
+# نصب وابستگی‌های سیستم (به همراه پکیج‌های مورد نیاز برای psycopg2 و ابزارهای مانیتورینگ)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    python3-dev \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -27,9 +28,7 @@ COPY . .
 # جمع‌آوری فایل‌های استاتیک
 RUN python manage.py collectstatic --noinput --clear
 
-# رندر از پورت داینامیک استفاده می‌کند، پس EXPOSE ثابت را حذف می‌کنیم
-
-# دستور اجرای نهایی:
-# ۱. ابتدا دیتابیس را آپدیت می‌کند
-# ۲. سپس سرور را روی پورتی که رندر اختصاص داده اجرا می‌کند
-CMD sh -c "python manage.py migrate && gunicorn --bind 0.0.0.0:${PORT:-8000} config.wsgi:application --workers 3 --timeout 120"
+# اجرای دستورات نهایی با Daphne (چون پروژه شما Channels دارد)
+# ۱. انجام Migration برای آپدیت دیتابیس Postgres رندر
+# ۲. اجرای سرور روی پورت اختصاصی رندر
+CMD sh -c "python manage.py migrate && daphne -b 0.0.0.0 -p ${PORT:-8000} config.asgi:application"

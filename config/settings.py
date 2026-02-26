@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Security & Environment
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-default-key-change-me")
 
-# در رندر اگر متغیر نباشد روی False می‌رود (امنیت بیشتر)
+# در رندر حتماً DEBUG باید False باشد مگر برای عیب‌یابی موقت
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = [
@@ -18,14 +18,14 @@ ALLOWED_HOSTS = [
     '*',
 ]
 
-# CSRF Trusted Origins - حل ارور ۴۰۳
+# حل ارور 403 - CSRF (بسیار مهم برای رندر)
 CSRF_TRUSTED_ORIGINS = [
     'https://hospital-monitor-9f8z.onrender.com',
 ]
 
-# Installed Apps - جابجایی جزمین به ابتدای لیست
+# Installed Apps - جزمین اول برای استایل‌ها
 INSTALLED_APPS = [
-    "jazzmin",  # باید اولین باشد
+    "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -44,7 +44,7 @@ INSTALLED_APPS = [
 # Middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",  # مدیریت فایل‌های استاتیک
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -58,16 +58,17 @@ ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-# Database - اتصال به PostgreSQL رندر
+# --- تنظیمات دیتابیس PostgreSQL مخصوص رندر ---
 DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get('DATABASE_URL'),
-        conn_max_age=600
+        conn_max_age=600,
+        ssl_require=True # رندر به اتصال امن برای Postgres نیاز دارد
     )
 }
 
-# اگر آدرس دیتابیس در رندر ست نشده باشد، از sqlite استفاده می‌کند
-if not DATABASES['default']:
+# اگر DATABASE_URL خالی بود (مثلاً در زمان Build یا لوکال)
+if not DATABASES['default'].get('ENGINE'):
     DATABASES['default'] = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
@@ -90,21 +91,13 @@ TEMPLATES = [
     },
 ]
 
-# Password validation
-AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
-]
-
 # Internationalization
 LANGUAGE_CODE = "fa-ir"
 TIME_ZONE = "Asia/Tehran"
 USE_I18N = True
 USE_TZ = True
 
-# Static files (WhiteNoise + Render)
+# Static files (WhiteNoise)
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
@@ -114,12 +107,13 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# Security for Production
+# امنیت HTTPS (فقط وقتی DEBUG غیرفعال است)
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True

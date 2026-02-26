@@ -8,8 +8,8 @@ from django.contrib.auth import get_user_model
 
 def create_superuser():
     User = get_user_model()
-    username = "admin_final"
-    password = "FinalPassword123!"
+    username = "admin"
+    password = "admin123"  # حتماً این پسورد را بعد از ورود تغییر دهید!
     
     # حذف یوزر قبلی برای جلوگیری از تداخل
     if User.objects.filter(username=username).exists():

@@ -8,16 +8,22 @@ from django.contrib.auth import get_user_model
 
 def create_superuser():
     User = get_user_model()
-    # این مقادیر را از پنل Render که دقایقی پیش تنظیم کردیم می‌خواند
-    username = os.environ.get("ADMIN_USERNAME", "admin")
-    password = os.environ.get("ADMIN_PASSWORD", "admin123456")
+    username = os.environ.get("ADMIN_USERNAME", "Davoad")
+    password = os.environ.get("ADMIN_PASSWORD", "Dau8nbt37v@")
     email = "admin@example.com"
 
-    if not User.objects.filter(username=username).exists():
-        User.objects.create_superuser(username=username, email=email, password=password)
-        print(f"--- Superuser '{username}' created! ---")
+    user, created = User.objects.get_or_create(username=username, defaults={'email': email})
+    
+    # ست کردن یا آپدیت کردن پسورد در هر شرایطی
+    user.set_password(password)
+    user.is_superuser = True
+    user.is_staff = True
+    user.save()
+    
+    if created:
+        print(f"--- User '{username}' created successfully! ---")
     else:
-        print(f"--- Superuser '{username}' already exists. ---")
+        print(f"--- User '{username}' already existed, password updated! ---")
 
 if __name__ == "__main__":
     create_superuser()

@@ -11,6 +11,7 @@ WORKDIR /app
 # نصب وابستگی‌های سیستم (فقط چیزهای لازم)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # ارتقا pip
@@ -23,12 +24,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # کپی کل پروژه
 COPY . .
 
-# جمع‌آوری فایل‌های استاتیک (با --clear برای پاک کردن قدیمی‌ها)
+# جمع‌آوری فایل‌های استاتیک
 RUN python manage.py collectstatic --noinput --clear
 
-# پورت 8000 را expose کن
-EXPOSE 8000
+# رندر از پورت داینامیک استفاده می‌کند، پس EXPOSE ثابت را حذف می‌کنیم
 
-# اجرای برنامه با Gunicorn (برای WSGI)
-# اگر از Channels استفاده می‌کنی، می‌توانی به Daphne تغییر دهی
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application", "--workers", "3", "--timeout", "120"]
+# دستور اجرای نهایی:
+# ۱. ابتدا دیتابیس را آپدیت می‌کند
+# ۲. سپس سرور را روی پورتی که رندر اختصاص داده اجرا می‌کند
+CMD sh -c "python manage.py migrate && gunicorn --bind 0.0.0.0:${PORT:-8000} config.wsgi:application --workers 3 --timeout 120"

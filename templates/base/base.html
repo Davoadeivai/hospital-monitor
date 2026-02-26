@@ -4,24 +4,56 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#050709">
-  <title>{% block title %}HospitalOS{% endblock %} — Hospital Monitor</title>
+  <title>{% block title %}آتیه مانیتور{% endblock %} — صنایع پزشکی آتیه</title>
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <!-- Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
-  <!-- Main CSS -->
   <link rel="stylesheet" href="/static/css/main.css">
-
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-  <!-- Lucide Icons (lightweight) -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <style>
+    .brand-logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: var(--space-3);
+    }
+    .brand-logo-img {
+      width: 52px;
+      height: 52px;
+      object-fit: contain;
+      border-radius: var(--radius-sm);
+      background: white;
+      padding: 4px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .brand-logo-text { flex: 1; min-width: 0; }
+    .brand-name-fa {
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+    .brand-name-en {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--acid);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .brand-tagline {
+      font-family: var(--font-body);
+      font-size: 9px;
+      color: var(--text-tertiary);
+      margin-top: 1px;
+    }
+  </style>
 
   {% block extra_css %}{% endblock %}
 </head>
@@ -29,20 +61,29 @@
 
 <div class="app-shell">
 
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
   <!-- ============ SIDEBAR ============ -->
   <nav class="sidebar" id="sidebar">
 
     <div class="sidebar-brand">
-      <div class="brand-mark">
-        <div class="brand-icon">⚕️</div>
-        <div>
-          <div class="brand-name">HospitalOS</div>
-          <div class="brand-sub">Monitor v2.0</div>
+      <div class="brand-logo-wrap">
+        <img
+          src="/static/images/atieh_logo.jpg"
+          alt="صنایع پزشکی آتیه"
+          class="brand-logo-img"
+          onerror="this.style.display='none';document.getElementById('brand-fallback').style.display='flex'"
+        >
+        <div id="brand-fallback" style="display:none;width:52px;height:52px;background:linear-gradient(135deg,#0099bb,#00cc6a);border-radius:6px;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">⚕️</div>
+        <div class="brand-logo-text">
+          <div class="brand-name-fa">صنایع پزشکی آتیه</div>
+          <div class="brand-name-en">Atieh Medical</div>
+          <div class="brand-tagline">ره گستر آیتاب آتیه</div>
         </div>
       </div>
       <div class="system-status">
         <div class="status-led" id="sys-led"></div>
-        <span id="sys-status-text" style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">SYSTEM ONLINE</span>
+        <span id="sys-status-text" style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">سیستم آنلاین</span>
       </div>
     </div>
 
@@ -117,6 +158,10 @@
 
       <div class="nav-section">
         <div class="nav-section-label">SYSTEM</div>
+        <a href="/devices/plc-registers/" class="nav-item">
+          <span class="nav-icon"><i class="fas fa-sliders-h"></i></span>
+          تنظیم رجیسترها
+        </a>
         <a href="/admin/" class="nav-item">
           <span class="nav-icon"><i class="fas fa-shield-alt"></i></span>
           پنل مدیریت
@@ -141,16 +186,15 @@
   <!-- ============ MAIN ============ -->
   <div class="main-content">
 
-    <!-- Topbar -->
     <header class="topbar">
       <button class="btn btn-ghost btn-icon btn-sm" id="sidebar-toggle" onclick="toggleSidebar()" style="display:none">
         <i class="fas fa-bars"></i>
       </button>
 
       <div class="topbar-breadcrumb">
-        <span class="breadcrumb-parent">HOSPITAL MONITOR</span>
+        <span class="breadcrumb-parent">آتیه مانیتور</span>
         <span class="breadcrumb-sep">/</span>
-        <span class="breadcrumb-current">{% block breadcrumb %}DASHBOARD{% endblock %}</span>
+        <span class="breadcrumb-current">{% block breadcrumb %}داشبورد{% endblock %}</span>
       </div>
 
       <div class="topbar-right">
@@ -159,53 +203,53 @@
           <i class="fas fa-bell"></i> {{ unresolved_alerts_count }} هشدار فعال
         </a>
         {% endif %}
-
         <div class="live-ticker">
           <div class="live-ticker-dot"></div>
-          <span id="topbar-clock" class="topbar-clock" style="font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary)">--:--:--</span>
+          <span id="topbar-clock" style="font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary)">--:--:--</span>
         </div>
       </div>
     </header>
 
-    <!-- Page Content -->
     <main class="page-content">
       {% block content %}{% endblock %}
     </main>
 
   </div>
-
 </div>
 
-<!-- Toast Container -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- ============ GLOBAL JS ============ -->
 <script>
-// ===== Clock =====
 function updateClock() {
-  const now = new Date();
   document.getElementById('topbar-clock').textContent =
-    now.toLocaleTimeString('fa-IR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    new Date().toLocaleTimeString('fa-IR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
 }
 setInterval(updateClock, 1000);
 updateClock();
 
-// ===== Sidebar Toggle (Mobile) =====
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
 }
 
-// Check mobile
-if (window.innerWidth <= 768) {
-  document.getElementById('sidebar-toggle').style.display = 'flex';
+function checkMobile() {
+  const btn = document.getElementById('sidebar-toggle');
+  if (window.innerWidth <= 768) {
+    btn.style.display = 'flex';
+  } else {
+    btn.style.display = 'none';
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('show');
+  }
 }
+window.addEventListener('resize', checkMobile);
+checkMobile();
 
-// ===== Toast System =====
 function showToast(msg, type = 'success', duration = 4000) {
   const icons = { success: '✓', error: '✕', warning: '⚠' };
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  toast.innerHTML = `<span style="font-size:16px;font-weight:700;color:var(--${type === 'success' ? 'acid' : type === 'error' ? 'crimson' : 'amber'})">${icons[type]}</span><span>${msg}</span>`;
+  toast.innerHTML = `<span style="font-size:16px;font-weight:700;color:var(--${type==='success'?'acid':type==='error'?'crimson':'amber'})">${icons[type]}</span><span>${msg}</span>`;
   document.getElementById('toast-container').appendChild(toast);
   setTimeout(() => {
     toast.style.animation = 'toast-in 0.3s var(--ease-spring) reverse';
@@ -213,12 +257,10 @@ function showToast(msg, type = 'success', duration = 4000) {
   }, duration);
 }
 
-// ===== CSRF Helper =====
 function getCsrf() {
   return document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
 }
 
-// ===== API Helper =====
 async function apiPost(url, data = {}) {
   const res = await fetch(url, {
     method: 'POST',
@@ -228,17 +270,10 @@ async function apiPost(url, data = {}) {
   return res.json();
 }
 
-async function apiGet(url) {
-  const res = await fetch(url);
-  return res.json();
-}
-
-// ===== Alert Resolve =====
 async function resolveAlert(id, btn) {
   try {
     const res = await fetch(`/alerts/resolve/${id}/`, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': getCsrf() }
+      method: 'POST', headers: { 'X-CSRFToken': getCsrf() }
     });
     if (res.ok) {
       const item = btn.closest('.alert-item');
@@ -248,15 +283,10 @@ async function resolveAlert(id, btn) {
       setTimeout(() => item.remove(), 400);
       showToast('هشدار با موفقیت رفع شد', 'success');
     }
-  } catch(e) {
-    showToast('خطا در رفع هشدار', 'error');
-  }
+  } catch(e) { showToast('خطا در رفع هشدار', 'error'); }
 }
 
-// ===== Lucide Icons =====
 if (typeof lucide !== 'undefined') lucide.createIcons();
-
-// ===== Animate on load =====
 document.querySelectorAll('.fade-up').forEach((el, i) => {
   el.style.animationDelay = (i * 0.06) + 's';
 });

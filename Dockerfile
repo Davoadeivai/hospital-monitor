@@ -31,4 +31,5 @@ RUN python manage.py collectstatic --noinput --clear
 # اجرای دستورات نهایی با Daphne (چون پروژه شما Channels دارد)
 # ۱. انجام Migration برای آپدیت دیتابیس Postgres رندر
 # ۲. اجرای سرور روی پورت اختصاصی رندر
-CMD sh -c "python manage.py migrate && daphne -b 0.0.0.0 -p ${PORT:-8000} config.asgi:application"
+
+CMD sh -c "python manage.py migrate && python create_admin.py && daphne -b 0.0.0.0 -p ${PORT:-8000} config.asgi:application"

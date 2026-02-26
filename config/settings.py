@@ -1,6 +1,5 @@
-# config/settings.py
-
 import os
+import dj_database_url
 from pathlib import Path
 
 # Base Directory
@@ -9,18 +8,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Security & Environment
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-default-key-change-me")
 
-# در Render حتماً متغیر DEBUG=False بگذار
-DEBUG = os.environ.get("DEBUG", "True") == "True"
+# در رندر اگر متغیر نباشد روی False می‌رود (امنیت بیشتر)
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = [
-    '*',                                      # تست اولیه و Render رایگان
-    'hospital-monitor-9f8z.onrender.com',    # دامنه پروژه‌ات
-    '127.0.0.1',
+    'hospital-monitor-9f8z.onrender.com',
     'localhost',
+    '127.0.0.1',
+    '*',
 ]
 
-# Installed Apps
+# CSRF Trusted Origins - حل ارور ۴۰۳
+CSRF_TRUSTED_ORIGINS = [
+    'https://hospital-monitor-9f8z.onrender.com',
+]
+
+# Installed Apps - جابجایی جزمین به ابتدای لیست
 INSTALLED_APPS = [
+    "jazzmin",  # باید اولین باشد
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -28,10 +33,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    "jazzmin",
     "rest_framework",
     "corsheaders",
-    
 
     "apps.devices",
     "apps.monitoring",
@@ -41,7 +44,7 @@ INSTALLED_APPS = [
 # Middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",  # نزدیک اول
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # مدیریت فایل‌های استاتیک
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -51,18 +54,24 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# URLs & WSGI/ASGI
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-# Database (SQLite برای Render رایگان)
+# Database - اتصال به PostgreSQL رندر
 DATABASES = {
-    "default": {
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL'),
+        conn_max_age=600
+    )
+}
+
+# اگر آدرس دیتابیس در رندر ست نشده باشد، از sqlite استفاده می‌کند
+if not DATABASES['default']:
+    DATABASES['default'] = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
-}
 
 # Templates
 TEMPLATES = [
@@ -89,7 +98,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# Internationalization & Time
+# Internationalization
 LANGUAGE_CODE = "fa-ir"
 TIME_ZONE = "Asia/Tehran"
 USE_I18N = True
@@ -99,26 +108,28 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-
-# تغییر مهم: بدون Manifest تا خطای .map ندهد
 STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 # Media files
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# CORS (برای تست باز – در تولید محدود کن)
+# Security for Production
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# CORS
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Default primary key
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# REST Framework
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ]
 }
 
-# Email (console برای توسعه)
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

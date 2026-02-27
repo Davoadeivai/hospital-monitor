@@ -2,35 +2,48 @@ import os
 import dj_database_url
 from pathlib import Path
 
-# ==========================
-# BASE DIRECTORY
-# ==========================
+# =====================================================
+# Base
+# =====================================================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ==========================
-# SECURITY & ENVIRONMENT
-# ==========================
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-default-key-change-me")
+# =====================================================
+# Security
+# =====================================================
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-change-this-immediately"
+)
 
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
+# دامنه رندر را از environment بگیر
+RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+
 ALLOWED_HOSTS = [
-    'hospital-monitor-9f8z.onrender.com',
-    'localhost',
-    '127.0.0.1',
-    '*',
+    "localhost",
+    "127.0.0.1",
 ]
 
-# حل ارور 403 - CSRF
-CSRF_TRUSTED_ORIGINS = [
-    'https://hospital-monitor-9f8z.onrender.com',
-]
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
-# ==========================
-# INSTALLED APPS
-# ==========================
+# =====================================================
+# CSRF
+# =====================================================
+CSRF_TRUSTED_ORIGINS = []
+
+if RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(
+        f"https://{RENDER_EXTERNAL_HOSTNAME}"
+    )
+
+# =====================================================
+# Applications
+# =====================================================
 INSTALLED_APPS = [
     "jazzmin",
+
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -46,15 +59,17 @@ INSTALLED_APPS = [
     "apps.energy",
 ]
 
-# ==========================
-# MIDDLEWARE
-# ==========================
+# =====================================================
+# Middleware
+# =====================================================
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
+
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -65,26 +80,30 @@ ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-# ==========================
-# DATABASE
-# ==========================
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
-        conn_max_age=600,
-        ssl_require=True
-    )
-}
+# =====================================================
+# Database
+# =====================================================
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
-if not DATABASES['default'].get('ENGINE'):
-    DATABASES['default'] = {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True
+        )
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
     }
 
-# ==========================
-# TEMPLATES
-# ==========================
+# =====================================================
+# Templates
+# =====================================================
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -101,60 +120,65 @@ TEMPLATES = [
     },
 ]
 
-# ==========================
-# INTERNATIONALIZATION
-# ==========================
+# =====================================================
+# Internationalization
+# =====================================================
 LANGUAGE_CODE = "fa-ir"
 TIME_ZONE = "Asia/Tehran"
+
 USE_I18N = True
 USE_TZ = True
 
-# ==========================
-# STATIC FILES
-# ==========================
+# =====================================================
+# Static & Media
+# =====================================================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-# ⚡ تغییر مهم برای حل ارور collectstatic
 STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
-# ==========================
-# MEDIA FILES
-# ==========================
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# ==========================
-# SECURITY (HTTPS)
-# ==========================
+# =====================================================
+# Security Production Settings
+# =====================================================
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# ==========================
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+
+    X_FRAME_OPTIONS = "DENY"
+
+# =====================================================
 # CORS
-# ==========================
-CORS_ALLOW_ALL_ORIGINS = True
+# =====================================================
+CORS_ALLOW_ALL_ORIGINS = False
 
-# ==========================
-# REST FRAMEWORK
-# ==========================
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+
+# =====================================================
+# REST Framework
+# =====================================================
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
-    ]
+    ],
 }
 
-# ==========================
-# EMAIL
-# ==========================
+# =====================================================
+# Email
+# =====================================================
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-# ==========================
-# DEFAULT FIELD
-# ==========================
+# =====================================================
+# Default Field
+# =====================================================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

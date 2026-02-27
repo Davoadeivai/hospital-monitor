@@ -5,14 +5,15 @@ services:
   db:
     image: postgres:15
     restart: always
+    env_file: .env
     environment:
-      POSTGRES_DB: hospital_monitor
-      POSTGRES_USER: hospital_user
-      POSTGRES_PASSWORD: hospital_pass_2024
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hospital_user -d hospital_monitor"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,20 +42,9 @@ services:
   web:
     build: .
     restart: always
+    env_file: .env
     ports:
       - "8000:8000"
-    environment:
-      - DEBUG=False
-      - SECRET_KEY=your-secret-key-change-this-in-production
-      - DB_NAME=hospital_monitor
-      - DB_USER=hospital_user
-      - DB_PASSWORD=hospital_pass_2024
-      - DB_HOST=db
-      - DB_PORT=5432
-      - REDIS_URL=redis://redis:6379/0
-      - MQTT_BROKER_HOST=mqtt
-      - MQTT_BROKER_PORT=1883
-      - ALLOWED_HOSTS=localhost,127.0.0.1
     depends_on:
       db:
         condition: service_healthy
@@ -72,16 +62,7 @@ services:
   celery:
     build: .
     restart: always
-    environment:
-      - DEBUG=False
-      - SECRET_KEY=your-secret-key-change-this-in-production
-      - DB_NAME=hospital_monitor
-      - DB_USER=hospital_user
-      - DB_PASSWORD=hospital_pass_2024
-      - DB_HOST=db
-      - DB_PORT=5432
-      - REDIS_URL=redis://redis:6379/0
-      - MQTT_BROKER_HOST=mqtt
+    env_file: .env
     depends_on:
       - db
       - redis
@@ -91,14 +72,7 @@ services:
   celery-beat:
     build: .
     restart: always
-    environment:
-      - DEBUG=False
-      - SECRET_KEY=your-secret-key-change-this-in-production
-      - DB_NAME=hospital_monitor
-      - DB_USER=hospital_user
-      - DB_PASSWORD=hospital_pass_2024
-      - DB_HOST=db
-      - REDIS_URL=redis://redis:6379/0
+    env_file: .env
     depends_on:
       - db
       - redis
@@ -124,3 +98,4 @@ volumes:
   mqtt_log:
   media_files:
   static_files:
+

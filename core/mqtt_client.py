@@ -9,6 +9,47 @@ import os
 
 logger = logging.getLogger(__name__)
 
+# ============================================================
+# محدوده‌های قابل‌قبول سنسور (مقادیر خارج این محدوده نادیده گرفته می‌شوند)
+# ============================================================
+SENSOR_BOUNDS = {
+    # اتوکلاو
+    'temp_c':            (0,    200),    # درجه سانتیگراد
+    'pressure':          (0,    10),     # بار
+    'power_kw':          (0,    500),    # کیلووات
+    'voltage':           (0,    1000),   # ولت
+    'current':           (0,    1000),   # آمپر
+    'steam_flow':        (0,    100),    # kg/h
+    'water_level':       (0,    100),    # درصد
+    # زباله‌سوز
+    'combustion_temp':   (0,    1600),   # درجه سانتیگراد
+    'post_combustion_temp': (0, 1600),
+    'exhaust_temp':      (0,    600),
+    'co2':               (0,    100000), # ppm
+    'co':                (0,    10000),  # ppm
+    'nox':               (0,    5000),   # ppm
+    'so2':               (0,    5000),   # ppm
+    'fuel_flow':         (0,    200),    # L/h
+}
+
+
+def validate_sensor_payload(data: dict) -> tuple[bool, list]:
+    """
+    بررسی اعتبار داده سنسور
+    Returns: (is_valid, list_of_errors)
+    """
+    errors = []
+    for field, (min_val, max_val) in SENSOR_BOUNDS.items():
+        value = data.get(field)
+        if value is None:
+            continue  # فیلد اختیاری است
+        if not isinstance(value, (int, float)):
+            errors.append(f"{field}: مقدار باید عدد باشد، دریافت شد: {type(value).__name__}")
+            continue
+        if not (min_val <= value <= max_val):
+            errors.append(f"{field}: مقدار {value} خارج از محدوده [{min_val}, {max_val}]")
+    return len(errors) == 0, errors
+
 
 def get_mqtt_client():
     """ساخت و پیکربندی MQTT Client"""
@@ -65,6 +106,12 @@ def handle_sensor_data(data: dict, topic: str):
         device_serial = data.get('device_id') or data.get('serial_number')
         if not device_serial:
             logger.warning(f"داده بدون device_id: {data}")
+            return
+
+        # اعتبارسنجی محدوده داده‌های سنسور
+        is_valid, errors = validate_sensor_payload(data)
+        if not is_valid:
+            logger.warning(f"داده نامعتبر از {device_serial} (topic={topic}): {errors}")
             return
 
         device = Device.objects.get(serial_number=device_serial, is_active=True)

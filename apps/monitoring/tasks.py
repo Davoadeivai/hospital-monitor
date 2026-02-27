@@ -95,7 +95,7 @@ def check_device_connectivity():
 
             DeviceAlert.objects.get_or_create(
                 device=device,
-                alert_type='connection_lost',
+                alert_type='connectivity',
                 is_resolved=False,
                 defaults={
                     'severity': 'critical',
@@ -150,3 +150,39 @@ def simulate_device_data():
         data = simulate_sensor_data(device.pk, device.device_type)
         data['device_id'] = device.serial_number
         handle_sensor_data(data, f"simulate/{device.serial_number}")
+
+
+@shared_task
+def cleanup_old_sensor_data():
+    """
+    پاک‌سازی داده‌های خام سنسور قدیمی — Data Retention Policy
+
+    سیاست نگه‌داری:
+      - داده خام سنسور:        نگه‌داری SENSOR_RAW_RETENTION_DAYS  (پیش‌فرض: 90 روز)
+      - هشدارهای حل‌شده:       نگه‌داری ALERT_RETENTION_DAYS        (پیش‌فرض: 365 روز)
+
+    این تسک باید با Celery Beat هر شب یک‌بار اجرا شود.
+    """
+    from django.conf import settings
+    from django.utils import timezone
+    from apps.monitoring.models import SensorReading, DeviceAlert
+
+    raw_days   = getattr(settings, 'SENSOR_RAW_RETENTION_DAYS', 90)
+    alert_days = getattr(settings, 'ALERT_RETENTION_DAYS', 365)
+
+    raw_cutoff   = timezone.now() - timezone.timedelta(days=raw_days)
+    alert_cutoff = timezone.now() - timezone.timedelta(days=alert_days)
+
+    deleted_readings, _ = SensorReading.objects.filter(timestamp__lt=raw_cutoff).delete()
+    deleted_alerts,   _ = DeviceAlert.objects.filter(
+        is_resolved=True, resolved_at__lt=alert_cutoff
+    ).delete()
+
+    logger.info(
+        f"🧹 Data Retention: {deleted_readings} SensorReading "
+        f"و {deleted_alerts} DeviceAlert قدیمی پاک شدند."
+    )
+    return {
+        'deleted_readings': deleted_readings,
+        'deleted_alerts': deleted_alerts,
+    }

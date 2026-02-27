@@ -1,6 +1,19 @@
 import os
+import sys
 import dj_database_url
 from pathlib import Path
+
+# ==============================================================================
+# Monkeypatch: Django 4.2 + Python 3.14 (Template Context __copy__ bug)
+# ==============================================================================
+if sys.version_info >= (3, 14):
+    from django.template import context
+    def _patched_context_copy(self):
+        duplicate = super(context.BaseContext, self).__copy__()
+        duplicate.dicts = self.dicts[:]
+        return duplicate
+    context.BaseContext.__copy__ = _patched_context_copy
+
 
 # =====================================================
 # Base
@@ -52,6 +65,10 @@ INSTALLED_APPS = [
     "apps.devices",
     "apps.monitoring",
     "apps.energy",
+    "apps.alerts",
+    "apps.costs",
+    "apps.waste",
+    "apps.reports",
 ]
 
 # =====================================================
@@ -171,17 +188,144 @@ else:
 # REST Framework
 # =====================================================
 REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.BasicAuthentication",
+    ],
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
+        "rest_framework.permissions.IsAuthenticated",
     ],
 }
 
 # =====================================================
 # Email
 # =====================================================
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 
 # =====================================================
 # Default Field
 # =====================================================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# =====================================================
+# Django Channels — WebSocket Layer
+# =====================================================
+_redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [_redis_url],
+            "capacity": 1500,
+            "expiry": 10,
+        },
+    },
+}
+
+# =====================================================
+# Celery — صف پردازش پس‌زمینه
+# =====================================================
+CELERY_BROKER_URL = _redis_url
+CELERY_RESULT_BACKEND = _redis_url
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60       # 30 دقیقه حداکثر برای هر تسک
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+CELERY_BEAT_SCHEDULE = {
+    # بررسی اتصال دستگاه‌ها هر ۵ دقیقه
+    'check-device-connectivity': {
+        'task': 'apps.monitoring.tasks.check_device_connectivity',
+        'schedule': 300,  # هر ۵ دقیقه
+    },
+    # گزارش ماهانه — اول هر ماه ساعت ۱ بامداد
+    'monthly-energy-report': {
+        'task': 'apps.monitoring.tasks.generate_monthly_report',
+        'schedule': 60 * 60 * 24 * 30,  # تقریبی — در production از crontab استفاده شود
+    },
+    # پاک‌سازی داده‌های قدیمی — هر شب ساعت ۲ بامداد
+    'cleanup-old-sensor-data': {
+        'task': 'apps.monitoring.tasks.cleanup_old_sensor_data',
+        'schedule': 60 * 60 * 24,  # هر ۲۴ ساعت
+    },
+}
+
+
+# =====================================================
+# MQTT تنظیمات
+# =====================================================
+MQTT_BROKER_HOST = os.environ.get("MQTT_BROKER_HOST", "localhost")
+MQTT_BROKER_PORT = int(os.environ.get("MQTT_BROKER_PORT", 1883))
+MQTT_USERNAME = os.environ.get("MQTT_USERNAME", "")
+MQTT_PASSWORD = os.environ.get("MQTT_PASSWORD", "")
+MQTT_TOPIC_PREFIX = os.environ.get("MQTT_TOPIC_PREFIX", "hospital/devices")
+
+# =====================================================
+# هشدار پیامکی (Kavenegar)
+# =====================================================
+KAVENEGAR_API_KEY = os.environ.get("KAVENEGAR_API_KEY", "")
+ALERT_SMS_NUMBERS = [
+    n.strip() for n in os.environ.get("ALERT_SMS_NUMBERS", "").split(",") if n.strip()
+]
+
+# =====================================================
+# Data Retention — سیاست نگه‌داری داده
+# =====================================================
+SENSOR_RAW_RETENTION_DAYS = int(os.environ.get("SENSOR_RAW_RETENTION_DAYS", 90))
+ALERT_RETENTION_DAYS       = int(os.environ.get("ALERT_RETENTION_DAYS", 365))
+
+# =====================================================
+# Carbon Budget — بودجه ماهانه کربن (kg)
+# =====================================================
+CARBON_BUDGET_KG_MONTHLY = int(os.environ.get("CARBON_BUDGET_KG_MONTHLY", 500))
+
+
+# =====================================================
+# Logging
+# =====================================================
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "[{asctime}] {levelname} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+    "loggers": {
+        "core": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "apps": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+    },
+}

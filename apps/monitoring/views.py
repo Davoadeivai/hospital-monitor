@@ -2,7 +2,7 @@ import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, OuterRef, Subquery
 from django.utils import timezone
 from datetime import timedelta
 
@@ -18,7 +18,22 @@ def dashboard(request):
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     month_start = now.replace(day=1, hour=0, minute=0, second=0)
 
-    devices = Device.objects.filter(is_active=True).select_related('department')
+    # ── Subquery: آخرین reading هر دستگاه (یک query برای همه)
+    latest_reading_qs = SensorReading.objects.filter(
+        device=OuterRef('pk')
+    ).order_by('-timestamp').values('pk')[:1]
+
+    # ── Subquery: سیکل فعال هر دستگاه (یک query برای همه)
+    active_cycle_qs = DeviceCycle.objects.filter(
+        device=OuterRef('pk'),
+        status__in=['heating', 'sterilizing', 'cooling']
+    ).order_by('-start_time').values('pk')[:1]
+
+    devices = Device.objects.filter(is_active=True).select_related('department').annotate(
+        latest_reading_id=Subquery(latest_reading_qs),
+        active_cycle_id=Subquery(active_cycle_qs),
+    )
+
     total_devices = devices.count()
     online_devices = devices.filter(status='online').count()
     error_devices = devices.filter(status='error').count()
@@ -40,11 +55,25 @@ def dashboard(request):
     active_alerts = DeviceAlert.objects.filter(is_resolved=False).select_related('device').order_by('-created_at')[:10]
     critical_alerts = DeviceAlert.objects.filter(is_resolved=False, severity='critical').count()
 
-    devices_data = []
-    for device in devices:
-        last_reading = SensorReading.objects.filter(device=device).order_by('-timestamp').first()
-        active_cycle = DeviceCycle.objects.filter(device=device, status__in=['heating','sterilizing','cooling']).first()
-        devices_data.append({'device': device, 'last_reading': last_reading, 'active_cycle': active_cycle})
+    # ── بارگذاری reading و cycle با pk‌های annotate شده (2 query اضافی)
+    reading_ids = [d.latest_reading_id for d in devices if d.latest_reading_id]
+    cycle_ids   = [d.active_cycle_id   for d in devices if d.active_cycle_id]
+
+    readings_map = {
+        r.pk: r for r in SensorReading.objects.filter(pk__in=reading_ids)
+    }
+    cycles_map = {
+        c.pk: c for c in DeviceCycle.objects.filter(pk__in=cycle_ids)
+    }
+
+    devices_data = [
+        {
+            'device': d,
+            'last_reading': readings_map.get(d.latest_reading_id),
+            'active_cycle': cycles_map.get(d.active_cycle_id),
+        }
+        for d in devices
+    ]
 
     # 7-day chart
     chart_data = []
@@ -71,9 +100,10 @@ def dashboard(request):
             kwh=Sum('electricity_kwh'), cost=Sum('total_cost'))
         energy_data.append({'date': day.strftime('%m/%d'), 'kwh': round(float(agg['kwh'] or 0), 1), 'cost': float(agg['cost'] or 0)})
 
-    # Carbon ring (% of monthly budget, assume 500kg budget)
-    carbon_budget = 500
-    carbon_pct = min(month_carbon / carbon_budget, 1)
+    # Carbon ring — بودجه کربن از settings یا مقدار پیش‌فرض
+    from django.conf import settings as django_settings
+    carbon_budget = getattr(django_settings, 'CARBON_BUDGET_KG_MONTHLY', 500)
+    carbon_pct = min(month_carbon / carbon_budget, 1) if carbon_budget else 0
     carbon_ring_offset = 377 * (1 - carbon_pct)
 
     context = {
@@ -90,6 +120,7 @@ def dashboard(request):
         'energy_data': json.dumps(energy_data),
     }
     return render(request, 'dashboard/dashboard.html', context)
+
 
 
 @login_required

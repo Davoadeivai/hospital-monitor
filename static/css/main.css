@@ -1300,28 +1300,132 @@ select.form-control { cursor: pointer; }
   .sidebar { transform: translateX(100%); transition: transform 0.3s var(--ease-smooth); }
   .sidebar.open { transform: translateX(0); }
   .main-content { margin-right: 0; }
-  .page-content { padding: var(--space-4); }
-  .grid-3, .grid-4 { grid-template-columns: 1fr; }
-  .stat-grid { grid-template-columns: 1fr 1fr; }
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== ANIMATIONS ===== */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(30px) scale(0.9); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes spinner {
+  to { transform: rotate(360deg); }
+}
+
 .fade-up {
   opacity: 0;
-  transform: translateY(16px);
-  animation: fade-up 0.5s var(--ease-out) forwards;
+  animation: slide-up 0.6s var(--ease-out) forwards;
 }
 
-@keyframes fade-up {
-  to { opacity: 1; transform: translateY(0); }
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+
+
+/* ============================================================
+   RESPONSIVE DESIGN (MOBILE & TABLET)
+   ============================================================ */
+@media screen and (max-width: 1024px) {
+  /* Tablet adjustments */
+  .grid-2 {
+    grid-template-columns: 1fr !important;
+  }
 }
 
-.stagger-1 { animation-delay: 0.05s; }
-.stagger-2 { animation-delay: 0.1s; }
-.stagger-3 { animation-delay: 0.15s; }
-.stagger-4 { animation-delay: 0.2s; }
-.stagger-5 { animation-delay: 0.25s; }
-.stagger-6 { animation-delay: 0.3s; }
+@media screen and (max-width: 768px) {
+  /* Mobile layout overhaul */
+  
+  /* Sidebar handling */
+  .sidebar {
+    transform: translateX(100%); /* مخفی کردن سایدبار به سمت راست (چون RTL است) */
+    transition: transform 0.3s var(--ease-spring);
+    z-index: 1050;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Overlay for sidebar when open */
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 7, 9, 0.8);
+    backdrop-filter: blur(4px);
+    z-index: 1040;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  
+  .sidebar-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Main content takes full width */
+  .main-content {
+    margin-right: 0;
+  }
+
+  /* Header adjustments */
+  .topbar {
+    padding: 0 var(--space-4);
+  }
+
+  .topbar-breadcrumb {
+    font-size: 10px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-title {
+    font-size: 22px;
+  }
+
+  .page-title-group {
+    margin-bottom: var(--space-3);
+  }
+
+  /* Stat Grid 1 col */
+  .stat-grid, .grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Make tables horizontally scrollable */
+  .data-table-wrap, .panel-body:has(.data-table) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .data-table {
+    min-width: 600px; /* Force minimum width to trigger scroll instead of squash */
+  }
+
+  /* Padding tight */
+  .page-content {
+    padding: var(--space-4);
+  }
+  
+  .panel-header, .panel-body {
+    padding: var(--space-4);
+  }
+
+  /* Alert Buttons */
+  .alert-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
 
 /* ===== SPECIAL: LIVE TICKER ===== */
 .live-ticker {

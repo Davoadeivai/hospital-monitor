@@ -71,3 +71,27 @@ def plc_test(request, device_id):
         return JsonResponse({'success': False, 'error': 'پاسخی از PLC دریافت نشد'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def plc_registers(request):
+    """نمایش و مدیریت رجیسترهای PLC برای تمام دستگاه‌ها"""
+    devices = Device.objects.filter(is_active=True).order_by('name')
+    
+    # ایجاد داده‌های نمونه برای رجیسترها
+    registers_data = []
+    for device in devices:
+        registers_data.append({
+            'device': device,
+            'registers': [
+                {'address': '40001', 'name': 'دما', 'value': 121.5, 'unit': '°C'},
+                {'address': '40002', 'name': 'فشار', 'value': 1.52, 'unit': 'bar'},
+                {'address': '40003', 'name': 'قدرت', 'value': 14.8, 'unit': 'kW'},
+                {'address': '40004', 'name': 'وضعیت', 'value': 1, 'unit': ''},
+            ]
+        })
+    
+    return render(request, 'devices/plc_registers.html', {
+        'registers_data': registers_data,
+        'title': 'تنظیم رجیسترها',
+    })

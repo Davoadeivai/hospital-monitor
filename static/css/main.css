@@ -82,7 +82,7 @@ html { font-size: 15px; scroll-behavior: smooth; }
 body {
   font-family: var(--font-body);
   background: var(--void);
-  background-image: url('/static/img/bg-pattern.png');
+  background-image: url('/static/images/bg-dashboard.jpg.jpeg');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -92,6 +92,47 @@ body {
   direction: rtl;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Page-specific backgrounds */
+body.bg-login {
+  background-image: url('/static/images/images.jpeg');
+}
+
+body.bg-dashboard {
+  background-image: url('/static/images/bg-dashboard.jpg.jpeg');
+}
+
+body.bg-devices {
+  background-image: url('/static/images/images (1).jpeg');
+}
+
+body.bg-energy {
+  background-image: url('/static/images/images (2).jpeg');
+}
+
+body.bg-costs {
+  background-image: url('/static/images/images (3).jpeg');
+}
+
+body.bg-waste {
+  background-image: url('/static/images/images (4).jpeg');
+}
+
+body.bg-reports {
+  background-image: url('/static/images/images (5).jpeg');
+}
+
+body.bg-alerts {
+  background-image: url('/static/images/images (6).jpeg');
+}
+
+body.bg-monitoring {
+  background-image: url('/static/images/images (7).jpeg');
+}
+
+body.bg-plc {
+  background-image: url('/static/images/images (8).jpeg');
 }
 
 /* Ambient background pattern */

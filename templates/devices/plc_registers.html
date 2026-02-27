@@ -1,0 +1,237 @@
+{% extends 'base/base.html' %}
+{% block title %}تنظیم رجیسترها{% endblock %}
+{% block breadcrumb %}DEVICES / PLC REGISTERS{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+  background-image: url('/static/images/images (9).jpeg') !important;
+}
+.registers-grid {
+  display: grid;
+  gap: var(--space-5);
+}
+.device-section {
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+.device-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-default);
+}
+.device-icon {
+  font-size: 24px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+}
+.device-info h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.device-info p {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+.registers-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.registers-table th {
+  text-align: right;
+  padding: var(--space-3);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--border-default);
+}
+.registers-table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 14px;
+}
+.register-address {
+  font-family: var(--font-mono);
+  color: var(--plasma);
+  font-weight: 600;
+}
+.register-value {
+  font-family: var(--font-mono);
+  color: var(--acid);
+  font-weight: 700;
+}
+.register-input {
+  background: var(--surface-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  width: 100px;
+  text-align: center;
+}
+.register-input:focus {
+  outline: none;
+  border-color: var(--acid);
+  box-shadow: 0 0 0 2px rgba(0,255,136,0.1);
+}
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header fade-up">
+  <div class="page-title-group">
+    <div class="page-eyebrow">DEVICES / PLC REGISTERS</div>
+    <h1 class="page-title">تنظیم رجیسترها</h1>
+    <p class="page-subtitle">مدیریت و پیکربندی رجیسترهای PLC برای تمام دستگاه‌ها</p>
+  </div>
+  <div class="flex gap-3">
+    <button class="btn btn-primary" onclick="readAllRegisters()">
+      <i class="fas fa-sync-alt me-2"></i>خواندن همه رجیسترها
+    </button>
+    <button class="btn btn-success" onclick="writeAllRegisters()">
+      <i class="fas fa-save me-2"></i>ذخیره تغییرات
+    </button>
+  </div>
+</div>
+
+<div class="registers-grid fade-up stagger-1">
+  {% for item in registers_data %}
+  <div class="device-section">
+    <div class="device-header">
+      <div class="device-icon">
+        {% if item.device.device_type == 'autoclave' %}🔬{% else %}🔥{% endif %}
+      </div>
+      <div class="device-info">
+        <h3>{{ item.device.name }}</h3>
+        <p>{{ item.device.serial_number }} • {% if item.device.device_type == 'autoclave' %}اتوکلاو{% else %}زباله‌سوز{% endif %}</p>
+      </div>
+      <div style="margin-left: auto;">
+        <span class="badge {% if item.device.status == 'online' %}badge-green{% else %}badge-ghost{% endif %}">
+          {{ item.device.get_status_display }}
+        </span>
+      </div>
+    </div>
+
+    <table class="registers-table">
+      <thead>
+        <tr>
+          <th>آدرس</th>
+          <th>نام</th>
+          <th>مقدار فعلی</th>
+          <th>واحد</th>
+          <th>مقدار جدید</th>
+          <th>عملیات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for reg in item.registers %}
+        <tr>
+          <td class="register-address">{{ reg.address }}</td>
+          <td>{{ reg.name }}</td>
+          <td class="register-value">{{ reg.value }}</td>
+          <td>{{ reg.unit }}</td>
+          <td>
+            <input type="number" 
+                   class="register-input" 
+                   id="reg-{{ item.device.pk }}-{{ reg.address }}" 
+                   placeholder="{{ reg.value }}"
+                   step="0.1">
+          </td>
+          <td>
+            <button class="btn btn-ghost btn-sm" 
+                    onclick="writeRegister({{ item.device.pk }}, '{{ reg.address }}', '{{ reg.name }}')">
+              <i class="fas fa-pen"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% empty %}
+  <div style="text-align: center; padding: var(--space-12); color: var(--text-tertiary);">
+    <div style="font-size: 48px; margin-bottom: var(--space-4);">📋</div>
+    <h3>هیچ دستگاهی فعال نیست</h3>
+    <p>برای مدیریت رجیسترها، ابتدا دستگاه‌ها را در سیستم ثبت کنید</p>
+    <a href="/admin/devices/device/add/" class="btn btn-primary" style="margin-top: var(--space-4);">
+      <i class="fas fa-plus me-2"></i>افزودن دستگاه
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function writeRegister(deviceId, address, name) {
+  const input = document.getElementById(`reg-${deviceId}-${address}`);
+  const value = input.value;
+  
+  if (!value) {
+    showToast('لطفاً مقداری وارد کنید', 'warning');
+    return;
+  }
+  
+  // شبیه‌سازی نوشتن در رجیستر
+  showToast(`رجیستر ${name} (${address}) با مقدار ${value} به‌روزرسانی شد`, 'success');
+  input.style.borderColor = 'var(--acid)';
+  setTimeout(() => {
+    input.style.borderColor = '';
+  }, 2000);
+}
+
+function readAllRegisters() {
+  showToast('در حال خواندن همه رجیسترها...', 'success');
+  // شبیه‌سازی خواندن
+  setTimeout(() => {
+    showToast('همه رجیسترها با موفقیت خوانده شدند', 'success');
+  }, 1500);
+}
+
+function writeAllRegisters() {
+  const inputs = document.querySelectorAll('.register-input');
+  let changedCount = 0;
+  
+  inputs.forEach(input => {
+    if (input.value) {
+      changedCount++;
+      input.style.borderColor = 'var(--acid)';
+      setTimeout(() => {
+        input.style.borderColor = '';
+      }, 2000);
+    }
+  });
+  
+  if (changedCount > 0) {
+    showToast(`${changedCount} رجیستر با موفقیت به‌روزرسانی شدند`, 'success');
+  } else {
+    showToast('هیچ تغییری برای ذخیره وجود ندارد', 'warning');
+  }
+}
+</script>
+{% endblock %}

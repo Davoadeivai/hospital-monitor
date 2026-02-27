@@ -15,15 +15,15 @@ SECRET_KEY = os.environ.get(
     "django-insecure-change-this-immediately"
 )
 
+# اگر DEBUG=True باشد یعنی لوکال
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-# تشخیص اجرای روی Render
+# تشخیص Render
 IS_RENDER = "RENDER_EXTERNAL_HOSTNAME" in os.environ
 RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
 
 # Allowed Hosts
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
-
 if IS_RENDER and RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
@@ -31,7 +31,6 @@ if IS_RENDER and RENDER_EXTERNAL_HOSTNAME:
 # CSRF
 # =====================================================
 CSRF_TRUSTED_ORIGINS = []
-
 if IS_RENDER and RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
 
@@ -40,7 +39,6 @@ if IS_RENDER and RENDER_EXTERNAL_HOSTNAME:
 # =====================================================
 INSTALLED_APPS = [
     "jazzmin",
-
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -81,7 +79,6 @@ ASGI_APPLICATION = "config.asgi.application"
 # Database
 # =====================================================
 DATABASE_URL = os.environ.get("DATABASE_URL")
-
 if DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.parse(
@@ -122,7 +119,6 @@ TEMPLATES = [
 # =====================================================
 LANGUAGE_CODE = "fa-ir"
 TIME_ZONE = "Asia/Tehran"
-
 USE_I18N = True
 USE_TZ = True
 
@@ -132,7 +128,6 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-
 STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 MEDIA_URL = "/media/"
@@ -141,7 +136,8 @@ MEDIA_ROOT = BASE_DIR / "media"
 # =====================================================
 # Security Settings
 # =====================================================
-if not DEBUG:
+if not DEBUG and IS_RENDER:
+    # فقط در production واقعی HTTPS
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = True
@@ -150,6 +146,7 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 else:
+    # در لوکال همه خاموش
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
     SECURE_SSL_REDIRECT = False

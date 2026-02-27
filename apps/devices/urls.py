@@ -5,5 +5,6 @@ urlpatterns = [
     path('<int:pk>/', views.device_detail, name='device_detail'),
     path('<int:device_id>/plc-config/', views.plc_config, name='plc_config'),
     path('<int:device_id>/plc-test/', views.plc_test, name='plc_test'),
+    path('plc-registers/', views.plc_registers, name='plc_registers'),
     path('maintenance/', views.maintenance_log, name='maintenance_log_list'),
 ]

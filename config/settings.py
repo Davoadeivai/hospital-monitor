@@ -15,17 +15,16 @@ SECRET_KEY = os.environ.get(
     "django-insecure-change-this-immediately"
 )
 
-DEBUG = os.environ.get("DEBUG", "False") == "True"
+DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-# دامنه رندر را از environment بگیر
+# تشخیص اجرای روی Render
+IS_RENDER = "RENDER_EXTERNAL_HOSTNAME" in os.environ
 RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
 
-ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-]
+# Allowed Hosts
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
-if RENDER_EXTERNAL_HOSTNAME:
+if IS_RENDER and RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # =====================================================
@@ -33,10 +32,8 @@ if RENDER_EXTERNAL_HOSTNAME:
 # =====================================================
 CSRF_TRUSTED_ORIGINS = []
 
-if RENDER_EXTERNAL_HOSTNAME:
-    CSRF_TRUSTED_ORIGINS.append(
-        f"https://{RENDER_EXTERNAL_HOSTNAME}"
-    )
+if IS_RENDER and RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
 
 # =====================================================
 # Applications
@@ -142,27 +139,36 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # =====================================================
-# Security Production Settings
+# Security Settings
 # =====================================================
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+else:
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    SECURE_SSL_REDIRECT = False
+    SECURE_PROXY_SSL_HEADER = None
+    SECURE_HSTS_SECONDS = 0
 
-    X_FRAME_OPTIONS = "DENY"
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
 
 # =====================================================
 # CORS
 # =====================================================
-CORS_ALLOW_ALL_ORIGINS = False
-
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    if IS_RENDER and RENDER_EXTERNAL_HOSTNAME:
+        CORS_ALLOWED_ORIGINS = [f"https://{RENDER_EXTERNAL_HOSTNAME}"]
 
 # =====================================================
 # REST Framework
